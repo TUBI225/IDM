@@ -1,0 +1,13 @@
+.tools/
+.dotnet-cli/
+.build-appdata/
+.packages/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+__pycache__/
+*.pyc
+.idm-data/
+downloads/

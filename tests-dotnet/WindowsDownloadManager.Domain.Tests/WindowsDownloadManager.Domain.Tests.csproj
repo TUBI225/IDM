@@ -1,0 +1,9 @@
+<Project Sdk="MSTest.Sdk">
+  <PropertyGroup>
+    <TestingExtensionsProfile>Default</TestingExtensionsProfile>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WindowsDownloadManager.Domain\WindowsDownloadManager.Domain.csproj" />
+  </ItemGroup>
+</Project>

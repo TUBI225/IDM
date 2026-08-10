@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "windowsdownloadmanager.application": {
+        "type": "Project",
+        "dependencies": {
+          "WindowsDownloadManager.Domain": "[1.0.0, )"
+        }
+      },
+      "windowsdownloadmanager.domain": {
+        "type": "Project"
+      }
+    }
+  }
+}

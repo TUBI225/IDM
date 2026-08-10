@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\WindowsDownloadManager.Domain\WindowsDownloadManager.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WindowsDownloadManager.Application/WindowsDownloadManager.Application.csproj" />
+    <Project Path="src/WindowsDownloadManager.Domain/WindowsDownloadManager.Domain.csproj" />
+    <Project Path="src/WindowsDownloadManager.Network/WindowsDownloadManager.Network.csproj" />
+    <Project Path="src/WindowsDownloadManager.Persistence/WindowsDownloadManager.Persistence.csproj" />
+    <Project Path="src/WindowsDownloadManager.Storage/WindowsDownloadManager.Storage.csproj" />
+  </Folder>
+  <Folder Name="/tests-dotnet/">
+    <Project Path="tests-dotnet/WindowsDownloadManager.CrashTestHost/WindowsDownloadManager.CrashTestHost.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Application.Tests/WindowsDownloadManager.Application.Tests.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Domain.Tests/WindowsDownloadManager.Domain.Tests.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Integration.Tests/WindowsDownloadManager.Integration.Tests.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Network.Tests/WindowsDownloadManager.Network.Tests.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Persistence.Tests/WindowsDownloadManager.Persistence.Tests.csproj" />
+    <Project Path="tests-dotnet/WindowsDownloadManager.Storage.Tests/WindowsDownloadManager.Storage.Tests.csproj" />
+  </Folder>
+</Solution>

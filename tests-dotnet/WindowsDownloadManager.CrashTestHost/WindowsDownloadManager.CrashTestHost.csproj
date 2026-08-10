@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WindowsDownloadManager.Application\WindowsDownloadManager.Application.csproj" />
+    <ProjectReference Include="..\..\src\WindowsDownloadManager.Domain\WindowsDownloadManager.Domain.csproj" />
+    <ProjectReference Include="..\..\src\WindowsDownloadManager.Persistence\WindowsDownloadManager.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\WindowsDownloadManager.Storage\WindowsDownloadManager.Storage.csproj" />
+  </ItemGroup>
+</Project>
