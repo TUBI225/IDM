@@ -140,7 +140,7 @@ La nouvelle sonde compare l’identité persistée à une observation actuelle e
 d’URL finale expurgée, taille, ETag et Last-Modified. Un signal connu disparu devient « preuve
 insuffisante », la perte de Range est séparée et aucune branche ne modifie la tâche ou le temporaire.
 R-001 est réduit pour la détection déterministe d’une contradiction, mais reste critique : aucun
-recouvrement binaire, hash officiel, nouveau lien légitime, course entre sonde et requête de reprise
+recouvrement binaire, nouveau lien légitime, course entre sonde et requête de reprise
 ou test PR-052/061 complet n’est encore réalisé.
 
 ## Révision G2 — décision combinée en lecture seule
@@ -199,7 +199,8 @@ fichier exact et `Completed`.
 
 Le SHA-256 streaming persisté réduit R-001/R-011 : une modification du temporaire ou de la destination
 entre vérification et réparation bloque désormais la finalisation. R-010 reste ouvert faute de
-mesure CPU/débit, et R-001 reste partiel tant qu’aucun hash officiel distant n’est automatiquement acquis.
+mesure CPU/débit, et R-001 reste partiel : l’empreinte distante est désormais acquise automatiquement
+et vérifiée à la finalisation, mais le recouvrement binaire, les courses et la carte officielle restent.
 
 ## Réduction de risques — collisions et finalisation inter-volume du 2026-08-11
 

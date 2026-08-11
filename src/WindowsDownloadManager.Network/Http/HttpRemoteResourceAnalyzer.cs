@@ -113,6 +113,8 @@ public sealed class HttpRemoteResourceAnalyzer : IRemoteResourceAnalyzer
         var disposition = response.Content.Headers.ContentDisposition;
         var suggestedFileName = disposition?.FileNameStar ?? disposition?.FileName?.Trim('"');
 
+        var sha256 = Sha256HeaderParser.ExtractSha256(response);
+
         return new RemoteResourceInfo(
             originalUri,
             finalUri,
@@ -121,7 +123,8 @@ public sealed class HttpRemoteResourceAnalyzer : IRemoteResourceAnalyzer
             response.Content.Headers.ContentType?.MediaType,
             response.Headers.ETag?.ToString(),
             response.Content.Headers.LastModified,
-            supportsByteRanges);
+            supportsByteRanges,
+            sha256);
     }
 
     private static bool IsRedirect(HttpStatusCode statusCode) => statusCode is

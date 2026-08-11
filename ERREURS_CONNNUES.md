@@ -106,11 +106,15 @@ de sécurité bloque la publication jusqu’à décision explicite.
 
 ## LIM-012 — Empreinte officielle distante non acquise automatiquement
 
-- Statut : CONFIRMÉE — 2026-08-11.
+- Statut : CORRIGÉE — 2026-08-11.
 - Effet : le SHA-256 local prouve la stabilité avant/après move et réparation, mais ne garantit pas
   l’authenticité distante sans valeur attendue issue d’une source de confiance.
 - Contournement : fournir explicitement une empreinte attendue à la finalisation lorsqu’elle existe.
-- Clôture : protocole versionné d’acquisition/validation d’un hash officiel avec tests adverses.
+- Clôture : extraction automatique des en-têtes HTTP de digest (Content-Digest, Digest, x-checksum-sha256,
+  x-goog-hash, x-amz-checksum-sha256) avec normalisation hexadécimale (hex 64, base64 et base64url),
+  persistance dans une colonne SQLite dédiée `remote_sha256` (migration v4) distincte du hash local,
+  réconciliation d'identité et validation stricte par défaut à la finalisation
+  (`allowForcedBypass: false`). Le forçage reste possible explicitement pour l'utilisateur.
 
 ## BUG-002 — Dossiers source `Downloads` ignorés par Git
 

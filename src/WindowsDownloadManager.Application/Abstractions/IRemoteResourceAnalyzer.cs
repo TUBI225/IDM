@@ -13,4 +13,5 @@ public sealed record RemoteResourceInfo(
     string? ContentType,
     string? EntityTag,
     DateTimeOffset? LastModified,
-    bool SupportsByteRanges);
+    bool SupportsByteRanges,
+    string? Sha256 = null);

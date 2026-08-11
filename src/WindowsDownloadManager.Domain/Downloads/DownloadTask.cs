@@ -57,7 +57,7 @@ public sealed class DownloadTask
 
         var normalizedSha256 = verifiedSha256 is null
             ? null
-            : NormalizeSha256(verifiedSha256, nameof(verifiedSha256));
+            : Sha256Hex.Normalize(verifiedSha256, nameof(verifiedSha256));
         if (normalizedSha256 is not null &&
             state is not (DownloadState.Verifying or DownloadState.Finalizing or DownloadState.Completed))
         {
@@ -121,7 +121,7 @@ public sealed class DownloadTask
             throw new InvalidOperationException("SHA-256 has already been recorded.");
         }
 
-        VerifiedSha256 = NormalizeSha256(sha256, nameof(sha256));
+        VerifiedSha256 = Sha256Hex.Normalize(sha256, nameof(sha256));
     }
 
     public void ResolveDestinationCollision(string destinationPath)
@@ -153,16 +153,5 @@ public sealed class DownloadTask
         }
 
         ConfirmedBytes = confirmedBytes;
-    }
-
-    private static string NormalizeSha256(string sha256, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sha256, parameterName);
-        if (sha256.Length != 64 || sha256.Any(character => !Uri.IsHexDigit(character)))
-        {
-            throw new ArgumentException("SHA-256 must contain exactly 64 hexadecimal characters.", parameterName);
-        }
-
-        return sha256.ToUpperInvariant();
     }
 }

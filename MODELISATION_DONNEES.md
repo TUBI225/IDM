@@ -268,6 +268,16 @@ hexadécimaux majuscules. Le champ reste nul avant vérification. Il est enregis
 transaction que l’état `Finalizing`, puis conservé en `Completed`. Une ligne v2 migre avec une valeur
 nulle ; une ancienne intention sans hash est restaurable mais sa réparation s’arrête prudemment.
 
+## Migration v4 — empreinte distante (2026-08-11)
+
+La migration additive v4 ajoute `downloads.remote_sha256 TEXT NULL`, borné à 64 caractères
+hexadécimaux majuscules. Elle reçoit exclusivement l’empreinte SHA-256 annoncée par le serveur dans les
+en-têtes HTTP de réponse et portée par `RemoteIdentity.Sha256`. Elle reste distincte de
+`verified_sha256` (hash local calculé à la finalisation). Une ligne v3 migre avec une valeur nulle ; une
+empreinte serveur non persistée avant v4 est simplement re-sondée lors de la prochaine réconciliation.
+La réhydratation de `RemoteIdentity` lit `remote_sha256` et n’utilise plus `verified_sha256`, ce qui
+lève la confusion sémantique entre empreinte annoncée et hash vérifié.
+
 ## Collision et transit inter-volume — 2026-08-11
 
 Aucune migration v4 n’est nécessaire. En mode `KeepBoth`, `destination_path` reçoit le chemin suffixé

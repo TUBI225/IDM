@@ -9,12 +9,14 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
         RemoteIdentityDifference.FinalUriChanged |
         RemoteIdentityDifference.LengthChanged |
         RemoteIdentityDifference.EntityTagChanged |
-        RemoteIdentityDifference.LastModifiedChanged;
+        RemoteIdentityDifference.LastModifiedChanged |
+        RemoteIdentityDifference.Sha256Changed;
 
     private const RemoteIdentityDifference MissingEvidence =
         RemoteIdentityDifference.LengthEvidenceMissing |
         RemoteIdentityDifference.EntityTagEvidenceMissing |
         RemoteIdentityDifference.LastModifiedEvidenceMissing |
+        RemoteIdentityDifference.Sha256EvidenceMissing |
         RemoteIdentityDifference.SufficientIdentityEvidenceMissing;
 
     public async ValueTask<RemoteIdentityReconciliationResult> ReconcileAsync(
@@ -42,7 +44,8 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
             resource.Length,
             resource.EntityTag,
             resource.LastModified,
-            resource.SupportsByteRanges);
+            resource.SupportsByteRanges,
+            resource.Sha256);
         var differences = Compare(persistedIdentity, observedIdentity);
 
         return new RemoteIdentityReconciliationResult(
@@ -79,6 +82,11 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
             observed.LastModified,
             RemoteIdentityDifference.LastModifiedChanged,
             RemoteIdentityDifference.LastModifiedEvidenceMissing);
+        differences |= CompareOptional(
+            persisted.Sha256,
+            observed.Sha256,
+            RemoteIdentityDifference.Sha256Changed,
+            RemoteIdentityDifference.Sha256EvidenceMissing);
 
         if (persisted.SupportsByteRanges && !observed.SupportsByteRanges)
         {
@@ -140,6 +148,10 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
         RemoteIdentity persisted,
         RemoteIdentity observed)
     {
+        var hasMatchingSha256 =
+            persisted.Sha256 is { } persistedHash &&
+            observed.Sha256 is { } observedHash &&
+            string.Equals(persistedHash, observedHash, StringComparison.OrdinalIgnoreCase);
         var hasMatchingStrongEntityTag =
             persisted.EntityTag is { } persistedTag &&
             observed.EntityTag is { } observedTag &&
@@ -151,7 +163,7 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
             persisted.LastModified is { } persistedDate &&
             observed.LastModified == persistedDate;
 
-        return hasMatchingStrongEntityTag || hasMatchingLengthAndDate;
+        return hasMatchingSha256 || hasMatchingStrongEntityTag || hasMatchingLengthAndDate;
     }
 
     private static RemoteIdentityReconciliationStatus Classify(RemoteIdentityDifference differences)
@@ -180,7 +192,8 @@ public sealed class RemoteIdentityReconciler(IRemoteResourceAnalyzer remoteResou
             identity.Length,
             identity.EntityTag,
             identity.LastModified,
-            identity.SupportsByteRanges);
+            identity.SupportsByteRanges,
+            identity.Sha256);
 
     private static bool UrisMatch(Uri first, Uri second) =>
         Uri.Compare(

@@ -279,7 +279,7 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   insuffisant ; perte de Range séparée ; query/fragment expurgés.
 - Intégration réseau : une seule requête `Range: bytes=0-0`, aucun appel au port de contenu,
   temporaire inchangé, état et checkpoint inchangés — RÉUSSI.
-- PR-052/061 : PARTIEL seulement. Hash officiel, recouvrement binaire, nouveau lien, course entre
+- PR-052/061 : PARTIEL seulement. Recouvrement binaire, nouveau lien, course entre
   sonde et reprise, mutation et reprise réseau : NON EXÉCUTÉS. Résultat inconnu.
 - Preuve canonique finale : `eng/verify.ps1`, build Release 0 avertissement/0 erreur ; 64 exécutés,
   64 réussis, 0 échec, 0 ignoré, 9,801 s ; formatage et contrôle documentaire réussis.
@@ -477,7 +477,7 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   sans perdre la tâche ; migration v1→v3 conservée.
 - Intégration : finalisation et trois réparations subprocess restaurent le même hash persistant.
 - Tests ciblés : Domain 9/9, Application 56/56, Storage 19/19, Persistence 9/9, Integration 19/19.
-- Limites : hash officiel distant, benchmark gros fichier, inter-volume et panne matérielle non exécutés.
+- Limites : benchmark gros fichier, inter-volume réel et panne matérielle non exécutés.
 
 ## 23. Collisions et finalisation inter-volume — 2026-08-11
 
@@ -495,5 +495,7 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   Integration 20/20, tous réussis.
 - Vérification canonique finale `eng/verify.ps1` : 147 exécutés, 147 réussis, 0 échec, 0 ignoré en
   26,864 s ; build 0 avertissement/0 erreur, formatage et documentation réussis.
+- La tranche empreinte distante du 2026-08-11 porte la suite à 164 tests : build Release 0 erreur,
+  164/164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage sans changement ; documentation réussie.
 - Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
   reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.

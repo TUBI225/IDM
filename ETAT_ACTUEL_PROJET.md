@@ -14,9 +14,9 @@ Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONN
 - Branche Git : `main`, dépôt local relié à `https://github.com/TUBI225/IDM.git`.
 - Dernier commit : commit initial de la baseline G2, publié le 2026-08-11.
 - État général : **SOCLE C# PARTIEL, NON UTILISABLE ENCORE COMME GESTIONNAIRE COMPLET**.
-- Porte actuelle : G2 partielle ; reprise réseau, SHA-256 persisté, collisions explicites et
-  finalisation même/inter-volume simulée présents ; empreinte distante officielle et chaos matériel
-  restent à construire.
+- Porte actuelle : G2 partielle ; reprise réseau, SHA-256 persisté, collisions explicites,
+  finalisation même/inter-volume simulée et empreinte distante officielle présents ; chaos matériel
+  et banc inter-volume réel restent à construire.
 
 Le projet contient deux piles distinctes. Le prototype Python est une référence temporaire de
 comportement. Le produit actif cible est le moteur C#/.NET 10. Une preuve Python ne valide pas une
@@ -47,10 +47,10 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  136 tests distincts réussissent après l’ajout du SHA-256 et de la migration v3.
+  164 tests distincts réussissent après l’ajout de l’empreinte distante et de la migration v4.
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
-- Writer positionnel avec flush disque et dépôt SQLite v3 : migrations v1/v2/v3 checksummées, WAL,
+- Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
   `synchronous=FULL`, écrivain sérialisé et URL persistée sans query/fragment.
 - Orchestrateur headless neuf : analyse, création exclusive du temporaire, flux Range, blocs 64 Kio,
   flush avant checkpoint SQLite et arrêt en `VERIFYING` avant toute finalisation.
@@ -107,8 +107,9 @@ sauf correction nécessaire à une fixture de parité approuvée.
 
 ## 5. Risques et anomalies prioritaires
 
-- R-001 : comparaison, recouvrement, reprise et SHA-256 final local présents ; hash officiel distant
-  et courses inter-processus restent absents.
+- R-001 : comparaison, recouvrement, reprise et SHA-256 final local présents ; empreinte distante
+  acquise depuis les en-têtes HTTP et vérifiée à la finalisation (mode strict par défaut) ; courses
+  inter-processus restent absents.
 - R-002/R-011 : ordre flush→checkpoint prouvé par exceptions et sept terminaisons subprocess jusqu’à
   la frontière pré-écriture du second bloc ; erreur pendant écriture, panne électrique et écriture
   partielle restent.
@@ -178,8 +179,11 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-Poursuivre G2 : intégrer une empreinte officielle distante lorsqu’elle est disponible, puis exécuter
-la copie inter-volume sur deux volumes physiques avec interruption subprocess, disque plein et retrait.
+L'intégration de l'empreinte distante SHA-256 est désormais complète : extraction des en-têtes HTTP,
+persistance dans une colonne dédiée (`remote_sha256`, migration v4) et validation stricte par défaut à la
+finalisation, avec forçage explicite et tracé pour l'utilisateur. La prochaine étape consiste à étendre le
+banc subprocess au protocole inter-volume sur deux volumes physiques avec interruption subprocess, disque
+plein et retrait.
 
 ## 9. Preuve collision et inter-volume — 2026-08-11
 
@@ -190,7 +194,17 @@ la copie inter-volume sur deux volumes physiques avec interruption subprocess, d
 - Réparation testée pour transit partiel, source et destination identiques, destination divergente et
   nom suffixé restauré depuis SQLite.
 - Vérification canonique : restauration hors ligne réussie ; build Release 0 avertissement/0 erreur ;
-  147 exécutés, 147 réussis, 0 échec, 0 ignoré en 26,864 s ; formatage réussi ; documentation 16/16,
+  164 exécutés, 164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage réussi ; documentation 16/16,
   exigences 36/36 et 35 tâches cohérentes.
 - Deux volumes physiques, crash subprocess pendant la copie, disque plein, retrait, antivirus,
   reparse point concurrent et performance gros fichier : NON EXÉCUTÉS. Résultat inconnu.
+
+## 10. Correction d'intégrité de l'empreinte distante — 2026-08-11
+
+L'audit a relevé que l'empreinte serveur (`RemoteIdentity.Sha256`) n'était jamais persistée en SQLite et
+était confondue avec le hash local vérifié (`verified_sha256`). La correction ajoute la migration v4 et la
+colonne dédiée `remote_sha256`, alimentée par `SaveAsync` et restaurée par `FindAsync`. Le hash local reste
+dans `verified_sha256`. Le coordinateur de finalisation applique désormais la validation stricte par défaut
+(`allowForcedBypass: false`) ; le forçage reste possible explicitement pour l'utilisateur. Six tests
+ajoutés couvrent le rond-trip SQLite des deux empreintes, le chemin par défaut via `RemoteIdentity.Sha256`
+et le décodage base64url des en-têtes.

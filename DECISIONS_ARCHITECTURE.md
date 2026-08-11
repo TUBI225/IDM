@@ -97,7 +97,7 @@ conditions de révision ; le prototype ne transforme pas automatiquement un choi
 | ADR-008 | Architecture | Domain/Application + ports/adaptateurs | PROPOSÉE | test d’un moteur sans UI |
 | ADR-009 | État | Machine explicite persistée, transitions domaine | PROPOSÉE | matrice exhaustive |
 | ADR-010 | Écriture | Fichier unique préalloué si taille fiable, accès aléatoire | PROPOSÉE | disque plein/NTFS/amovible |
-| ADR-011 | Hash | SHA-256 final ; empreintes partielles versionnées | ACCEPTÉE, PARTIELLEMENT IMPLÉMENTÉE | coût et hash officiel restant |
+| ADR-011 | Hash | SHA-256 final ; empreintes partielles versionnées | ACCEPTÉE, PARTIELLEMENT IMPLÉMENTÉE | coût restant ; empreinte distante acquise |
 | ADR-012 | Secrets | DPAPI/utilisateur Windows, jamais SQLite en clair | PROPOSÉE | modèle de menace |
 | ADR-013 | Browser | Native Messaging, protocole JSON borné/versionné | PROPOSÉE | revue permissions/origines |
 | ADR-014 | Connexions | Départ modeste, croissance fondée sur mesures | PROPOSÉE | benchmark et 429 |
@@ -291,9 +291,10 @@ simulent deux volumes ; matériel réel, panne électrique et crash subprocess p
 
 Le SHA-256 du fichier exact est calculé en streaming avant l’intention `Finalizing`. Une empreinte
 attendue fournie par une source de confiance est comparée en temps constant lorsqu’elle existe. Le
-hash vérifié est persisté par la migration v3 et recalculé lors d’une réparation. Le choix SHA-256 est
-donc accepté pour cette frontière ; l’acquisition d’un hash officiel et les empreintes partielles
-versionnées restent à concevoir.
+hash vérifié est persisté par la migration v3 et recalculé lors d’une réparation. L’empreinte distante
+est désormais acquise automatiquement depuis les en-têtes HTTP et persistée par la migration v4 dans une
+colonne dédiée, distincte du hash local. Le choix SHA-256 est donc accepté pour cette frontière ; les
+empreintes partielles versionnées restent à concevoir.
 
 ## 5. Résultat de la porte G1
 

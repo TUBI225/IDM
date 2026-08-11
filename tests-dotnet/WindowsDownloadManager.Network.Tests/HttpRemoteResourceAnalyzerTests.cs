@@ -218,6 +218,21 @@ public sealed class HttpRemoteResourceAnalyzerTests
     }
 
     [TestMethod]
+    public async Task Analyze_ExtractsSha256Header_WhenPresent()
+    {
+        await using var server = new LoopbackHttpServer(
+            "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n" +
+            "Digest: sha-256=2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824\r\n" +
+            "Connection: close\r\n\r\nhello");
+        using var client = LoopbackClient();
+        var analyzer = Analyzer(client);
+
+        var info = await analyzer.AnalyzeAsync(server.Uri, CancellationToken.None);
+
+        Assert.AreEqual("2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824", info.Sha256);
+    }
+
+    [TestMethod]
     public void HttpHandler_UsesExplicitSafeDefaults()
     {
         using var handler = HttpNetworkClientFactory.CreateHandler(

@@ -3450,3 +3450,52 @@ Commit non encore créé au moment de cette entrée ; code et documentation sero
 | ERREURS_CONNNUES.md | MIS À JOUR | LIM-011 révisée sans clôture abusive |
 | FAQ_TECHNIQUE.md | MIS À JOUR | Collision et état de résistance aux crashs expliqués |
 | INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Méthode permanente appliquée sans changement |
+
+---
+
+# Entrée 2026-08-11 — Intégration de l'empreinte SHA-256 officielle distante et mode Téléchargement Forcé
+
+## Objectif
+
+Acquérir automatiquement l'empreinte SHA-256 distante lorsqu'elle est fournie par le serveur HTTP dans les en-têtes de réponse (`Content-Digest`, `Digest`, `x-checksum-sha256`, `x-sha256-checksum`, `x-goog-hash`, `x-amz-checksum-sha256`), l'intégrer dans l'identité distante (`RemoteIdentity`), la valider lors de la finalisation et de la réconciliation, et offrir une option de Téléchargement Forcé (`allowForcedBypass: true`) pour garantir qu'aucun téléchargement n'est bloqué en cas d'incohérence d'empreinte serveur.
+
+## Travail réalisé
+
+- Création de `Sha256HeaderParser` dans `WindowsDownloadManager.Network.Http` pour extraire et normaliser les empreintes SHA-256 (format Hex 64 caractères, Base64 et Base64url 32 octets).
+- Extension de `RemoteResourceInfo` et `RemoteIdentity` avec la propriété optionnelle `Sha256`.
+- Mise à jour de `HttpRemoteResourceAnalyzer` pour extraire et transmettre l'empreinte distante.
+- Mise à jour de `RemoteIdentityReconciler` pour intégrer la comparaison SHA-256 (`Sha256Changed`, `Sha256EvidenceMissing`) et traiter une empreinte SHA-256 concordante comme preuve d'identité forte.
+- Mise à jour de `DownloadFinalizationCoordinator` pour utiliser l'empreinte distante comme valeur attendue par défaut, avec validation stricte par défaut (`allowForcedBypass: false`) et forçage explicite via `allowForcedBypass: true`.
+- Ajout de la migration SQLite v4 et de la colonne dédiée `remote_sha256` pour persister l'empreinte serveur, distincte du hash local `verified_sha256` ; correction de `SqliteDownloadRepository` pour restaurer `RemoteIdentity.Sha256` depuis cette colonne.
+- Ajout de la suite de tests unitaires complète pour `Sha256HeaderParser`, `HttpRemoteResourceAnalyzer`, `RemoteIdentityReconciler` et `DownloadFinalizationCoordinator`, incluant le rond-trip SQLite des deux empreintes et le chemin strict par défaut.
+
+## Résultats
+
+Extraction d'empreinte HTTP fonctionnelle sur l'ensemble des en-têtes standards/courants, persistance
+dédiée et vérifiée. Une incohérence d'empreinte serveur bloque la finalisation par défaut sans mutation ;
+le forçage (`allowForcedBypass: true`) reste possible explicitement.
+
+## État final de la tâche
+
+SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
+implémenté et validé. Vérification canonique : build Release 0 erreur, 164/164 tests réussis, format
+sans changement, contrôle documentaire réussi. LIM-012 résolue.
+
+## Prochaine action
+
+Étendre le banc subprocess au protocole inter-volume sur deux volumes physiques et valider le comportement face au chaos matériel (disque plein, déconnexion).
+
+## Contrôle documentaire
+
+| Document | État | Action |
+|---|---|---|
+| Cahier_des_charges.md | MIS À JOUR | Empreinte officielle et téléchargement forcé consignés |
+| FEUILLE_DE_ROUTE.md | MIS À JOUR | Progression G2 et LIM-012 actualisées |
+| SUIVI_DEVELOPPEMENT.md | MIS À JOUR | Présente entrée ajoutée |
+| ARCHITECTURE_TECHNIQUE.md | MIS À JOUR | Extraction d'en-têtes et réconciliation SHA-256 documentées |
+| ETAT_ACTUEL_PROJET.md | MIS À JOUR | Empreinte serveur intégrée et LIM-012 clôturée |
+| DECISIONS_ARCHITECTURE.md | MIS À JOUR | ADR-011 fully implemented |
+| MODELISATION_DONNEES.md | MIS À JOUR | RemoteIdentity.Sha256 documenté |
+| SECURITE.md | MIS À JOUR | Mode forcé et validation SHA-256 précisés |
+| ERREURS_CONNNUES.md | MIS À JOUR | LIM-012 marquée CORRIGÉE |
+

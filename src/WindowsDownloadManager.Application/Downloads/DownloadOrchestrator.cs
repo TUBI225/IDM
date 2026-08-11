@@ -71,7 +71,8 @@ public sealed class DownloadOrchestrator
                 ContentType: null,
                 identity.EntityTag,
                 identity.LastModified,
-                identity.SupportsByteRanges);
+                identity.SupportsByteRanges,
+                identity.Sha256);
 
             if (identity.Length is null || task.ConfirmedBytes < identity.Length.Value)
             {
@@ -212,5 +213,6 @@ public sealed class DownloadOrchestrator
             resource.Length,
             resource.EntityTag,
             resource.LastModified,
-            resource.SupportsByteRanges);
+            resource.SupportsByteRanges,
+            resource.Sha256);
 }

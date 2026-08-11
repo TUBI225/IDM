@@ -26,7 +26,8 @@ public sealed class SqliteDownloadRepositoryTests
                 8192,
                 "\"strong-v1\"",
                 DateTimeOffset.Parse("2026-08-04T00:00:00Z"),
-                supportsByteRanges: true));
+                supportsByteRanges: true,
+                sha256: "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"));
         task.ConfirmPersistedBytes(4096);
 
         await repository.SaveAsync(task, CancellationToken.None);
@@ -45,6 +46,9 @@ public sealed class SqliteDownloadRepositoryTests
         Assert.AreEqual("\"strong-v1\"", restored.RemoteIdentity.EntityTag);
         Assert.AreEqual(DateTimeOffset.Parse("2026-08-04T00:00:00Z"), restored.RemoteIdentity.LastModified);
         Assert.IsTrue(restored.RemoteIdentity.SupportsByteRanges);
+        Assert.AreEqual(
+            "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824",
+            restored.RemoteIdentity.Sha256);
 
         var databaseBytes = await File.ReadAllBytesAsync(directory.DatabasePath);
         var databaseText = System.Text.Encoding.UTF8.GetString(databaseBytes);
@@ -66,7 +70,7 @@ public sealed class SqliteDownloadRepositoryTests
         command.CommandText = "SELECT COUNT(*), LENGTH(MIN(checksum)) FROM schema_migrations;";
         await using var reader = await command.ExecuteReaderAsync();
         Assert.IsTrue(await reader.ReadAsync());
-        Assert.AreEqual(3L, reader.GetInt64(0));
+        Assert.AreEqual(4L, reader.GetInt64(0));
         Assert.AreEqual(64L, reader.GetInt64(1));
     }
 
@@ -95,7 +99,7 @@ public sealed class SqliteDownloadRepositoryTests
         Assert.AreEqual(DownloadState.Analyzing, restored.State);
         Assert.IsNull(restored.TemporaryPath);
         Assert.IsNull(restored.RemoteIdentity);
-        Assert.AreEqual(3L, await MigrationCountAsync(directory.DatabasePath));
+        Assert.AreEqual(4L, await MigrationCountAsync(directory.DatabasePath));
     }
 
     [TestMethod]
@@ -125,6 +129,38 @@ public sealed class SqliteDownloadRepositoryTests
         Assert.IsNotNull(restored);
         Assert.AreEqual(sha256, restored.VerifiedSha256);
         Assert.AreEqual(DownloadState.Finalizing, restored.State);
+    }
+
+    [TestMethod]
+    public async Task SaveAndFind_FinalizingTask_DistinguishesRemoteFingerprintFromVerifiedHash()
+    {
+        using var directory = new TemporaryDirectory();
+        const string verifiedSha256 = "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824";
+        const string remoteSha256 = "1111111111111111111111111111111111111111111111111111111111111111";
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "C:\\Downloads\\file.bin",
+            DownloadState.Finalizing,
+            confirmedBytes: 5,
+            "C:\\Downloads\\file.download",
+            new RemoteIdentity(
+                new Uri("https://example.test/file.bin"),
+                5,
+                "\"v1\"",
+                null,
+                supportsByteRanges: true,
+                sha256: remoteSha256),
+            verifiedSha256);
+        await using var repository = new SqliteDownloadRepository(directory.DatabasePath);
+
+        await repository.SaveAsync(task, CancellationToken.None);
+        var restored = await repository.FindAsync(task.Id, CancellationToken.None);
+
+        Assert.IsNotNull(restored);
+        Assert.AreEqual(verifiedSha256, restored.VerifiedSha256);
+        Assert.AreEqual(remoteSha256, restored.RemoteIdentity?.Sha256);
+        Assert.AreNotEqual(restored.VerifiedSha256, restored.RemoteIdentity?.Sha256);
     }
 
     [TestMethod]
@@ -175,7 +211,8 @@ public sealed class SqliteDownloadRepositoryTests
 
         Assert.IsNotNull(restored);
         Assert.IsNull(restored.VerifiedSha256);
-        Assert.AreEqual(3L, await MigrationCountAsync(directory.DatabasePath));
+        Assert.IsNull(restored.RemoteIdentity?.Sha256);
+        Assert.AreEqual(4L, await MigrationCountAsync(directory.DatabasePath));
     }
 
     [TestMethod]
@@ -282,7 +319,7 @@ public sealed class SqliteDownloadRepositoryTests
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            DELETE FROM schema_migrations WHERE version = 3;
+            DELETE FROM schema_migrations WHERE version >= 3;
             ALTER TABLE downloads RENAME TO downloads_v3;
             CREATE TABLE downloads (
                 id TEXT PRIMARY KEY NOT NULL,

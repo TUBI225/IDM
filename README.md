@@ -57,10 +57,13 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - finalisation sans écrasement et réparation de l’état `Finalizing` ;
 - collisions explicites : refus par défaut ou conservation sous `nom (n).ext` ;
 - SHA-256 streaming persisté avant `Finalizing` et revérifié pendant toute réparation ;
+- empreinte distante SHA-256 extraite des en-têtes HTTP (`Content-Digest`, `Digest`, `x-checksum-sha256`,
+  `x-goog-hash`, `x-amz-checksum-sha256`), persistée dans une colonne dédiée et vérifiée à la finalisation
+  (mode strict par défaut, forçage explicite possible) ;
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
-- 147 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- 164 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
-Restent notamment à intégrer les empreintes officielles fournies par les serveurs, les essais sur
+Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, l’interface, la segmentation et l’installateur.
 
 ## Exécution

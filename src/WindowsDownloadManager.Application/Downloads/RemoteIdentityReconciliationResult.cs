@@ -24,6 +24,8 @@ public enum RemoteIdentityDifference
     LastModifiedEvidenceMissing = 1 << 6,
     SufficientIdentityEvidenceMissing = 1 << 7,
     ByteRangeSupportLost = 1 << 8,
+    Sha256Changed = 1 << 9,
+    Sha256EvidenceMissing = 1 << 10,
 }
 
 public sealed record RemoteIdentityReconciliationResult(

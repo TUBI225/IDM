@@ -9,7 +9,7 @@ namespace WindowsDownloadManager.Persistence.Sqlite;
 
 public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDisposable
 {
-    private const int CurrentSchemaVersion = 3;
+    private const int CurrentSchemaVersion = 4;
     private const string InitialMigration = """
         CREATE TABLE downloads (
             id TEXT PRIMARY KEY NOT NULL,
@@ -39,12 +39,19 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
                    (length(verified_sha256) = 64 AND
                     verified_sha256 NOT GLOB '*[^0-9A-F]*'));
         """;
+    private const string RemoteSha256Migration = """
+        ALTER TABLE downloads ADD COLUMN remote_sha256 TEXT NULL
+            CHECK (remote_sha256 IS NULL OR
+                   (length(remote_sha256) = 64 AND
+                    remote_sha256 NOT GLOB '*[^0-9A-F]*'));
+        """;
 
     private static readonly (int Version, string Sql)[] Migrations =
     [
         (1, InitialMigration),
         (2, RecoveryMetadataMigration),
         (3, VerifiedSha256Migration),
+        (4, RemoteSha256Migration),
     ];
 
     private readonly string _connectionString;
@@ -129,7 +136,7 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
         command.CommandText = """
             SELECT original_url, destination_path, state, confirmed_bytes,
                    temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges,
-                   verified_sha256
+                   verified_sha256, remote_sha256
             FROM downloads
             WHERE id = $id;
             """;
@@ -180,10 +187,10 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
                 INSERT INTO downloads(
                     id, original_url, destination_path, state, confirmed_bytes, created_at, updated_at,
                     temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges,
-                    verified_sha256)
+                    verified_sha256, remote_sha256)
                 VALUES ($id, $originalUrl, $destinationPath, $state, $confirmedBytes, $now, $now,
                         $temporaryPath, $finalUrl, $totalSize, $etag, $lastModified, $supportsByteRanges,
-                        $verifiedSha256)
+                        $verifiedSha256, $remoteSha256)
                 ON CONFLICT(id) DO UPDATE SET
                     original_url = excluded.original_url,
                     destination_path = excluded.destination_path,
@@ -196,6 +203,7 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
                     last_modified = excluded.last_modified,
                     supports_byte_ranges = excluded.supports_byte_ranges,
                     verified_sha256 = excluded.verified_sha256,
+                    remote_sha256 = excluded.remote_sha256,
                     updated_at = excluded.updated_at;
                 """;
             command.Parameters.AddWithValue("$id", task.Id.ToString("D"));
@@ -225,6 +233,9 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
             command.Parameters.AddWithValue(
                 "$verifiedSha256",
                 (object?)task.VerifiedSha256 ?? DBNull.Value);
+            command.Parameters.AddWithValue(
+                "$remoteSha256",
+                (object?)task.RemoteIdentity?.Sha256 ?? DBNull.Value);
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -325,12 +336,15 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
             throw new InvalidDataException("The persisted range capability is invalid.");
         }
 
+        var remoteSha256 = reader.FieldCount > 11 && !reader.IsDBNull(11) ? reader.GetString(11) : null;
+
         return new RemoteIdentity(
             new Uri(reader.GetString(5), UriKind.Absolute),
             reader.IsDBNull(6) ? null : reader.GetInt64(6),
             reader.IsDBNull(7) ? null : reader.GetString(7),
             lastModified,
-            supportsByteRanges == 1);
+            supportsByteRanges == 1,
+            sha256: remoteSha256);
     }
 
     private async ValueTask<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)

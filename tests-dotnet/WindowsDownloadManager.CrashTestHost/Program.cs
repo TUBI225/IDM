@@ -50,12 +50,15 @@ internal static class Program
             new Uri("https://example.test/fixture.bin"),
             destinationPath);
 
+        var isDifferentVolume = args.Length > 4 && string.Equals(args[4], "--different-volume", StringComparison.OrdinalIgnoreCase);
+        IFileVolumeComparer volumeComparer = isDifferentVolume ? new SimulatedDifferentVolumeComparer() : new PathRootFileVolumeComparer();
         await orchestrator.RunNewAsync(task, temporaryPath, CancellationToken.None);
         if (IsFinalizationBoundary(boundary))
         {
-            ITemporaryFileFinalizer finalizer = boundary == CrashBoundary.AfterFinalMove
-                ? new TerminatingFinalizer(new AtomicTemporaryFileFinalizer())
-                : new AtomicTemporaryFileFinalizer();
+            ITemporaryFileFinalizer baseFinalizer = new AtomicTemporaryFileFinalizer(volumeComparer);
+            ITemporaryFileFinalizer finalizer = IsTerminatingFinalizerBoundary(boundary)
+                ? new TerminatingFinalizer(baseFinalizer)
+                : baseFinalizer;
             var finalization = new DownloadFinalizationCoordinator(
                 new ReadOnlyTemporaryFileInspector(),
                 new Sha256TemporaryFileHasher(),
@@ -93,7 +96,14 @@ internal static class Program
     private static bool IsFinalizationBoundary(CrashBoundary boundary) =>
         boundary is CrashBoundary.AfterFinalizingCommit or
             CrashBoundary.AfterFinalMove or
-            CrashBoundary.AfterCompletedCommit;
+            CrashBoundary.AfterCompletedCommit or
+            CrashBoundary.AfterInterVolumeStagingFlushed or
+            CrashBoundary.AfterInterVolumeDestinationMoved;
+
+    private static bool IsTerminatingFinalizerBoundary(CrashBoundary boundary) =>
+        boundary is CrashBoundary.AfterFinalMove or
+            CrashBoundary.AfterInterVolumeStagingFlushed or
+            CrashBoundary.AfterInterVolumeDestinationMoved;
 
     private static bool IsFinalizationRepositoryBoundary(CrashBoundary boundary) =>
         boundary is CrashBoundary.AfterFinalizingCommit or
@@ -116,6 +126,11 @@ internal static class Program
     private static bool IsBeforeCheckpointCommit(CrashBoundary boundary) =>
         boundary is CrashBoundary.BeforeCheckpointCommit or
             CrashBoundary.BeforeSecondCheckpointCommit;
+
+    private sealed class SimulatedDifferentVolumeComparer : IFileVolumeComparer
+    {
+        public bool AreOnSameVolume(string firstPath, string secondPath) => false;
+    }
 
     private sealed class StubAnalyzer(byte[] content) : IRemoteResourceAnalyzer
     {
@@ -273,5 +288,7 @@ internal static class Program
         AfterFinalizingCommit,
         AfterFinalMove,
         AfterCompletedCommit,
+        AfterInterVolumeStagingFlushed,
+        AfterInterVolumeDestinationMoved,
     }
 }
