@@ -192,5 +192,7 @@ restent ouverts pour mort pendant écriture, caches matériels, panne électriqu
 R-001, R-002 et R-011 sont réduits par une reprise réelle au checkpoint après recouvrement et par
 l’ordre durable conservé sur les nouveaux blocs. R-021 est réduit par le refus d’écrasement et des
 volumes différents. ADR-029 possède une première réparation idempotente de `Finalizing`. Ces risques
-restent ouverts pour concurrence inter-processus, hash final absent, antivirus/verrou, crash aux
-frontières du move, copie inter-volume, panne électrique et reboot Windows.
+restent ouverts pour concurrence inter-processus, hash final absent, antivirus/verrou, copie
+inter-volume, panne électrique et reboot Windows. Les trois crashs subprocess de finalisation du
+2026-08-11 réduisent R-011/R-021 : intention seule, move seul et commit final convergent vers un
+fichier exact et `Completed`.

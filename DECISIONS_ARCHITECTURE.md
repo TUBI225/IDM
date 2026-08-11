@@ -274,7 +274,9 @@ confirmation et politique de télémétrie (par défaut aucune).
 - Mise en œuvre 2026-08-10 : `Finalizing` est persisté avant un move même volume sans écrasement,
   puis `Completed` après succès. La réparation traite les deux états non ambigus (temporaire seul ou
   destination seule) et bloque si les deux chemins existent ou manquent. Le SHA-256, la copie
-  inter-volume et les crashs subprocess aux frontières restent nécessaires.
+  inter-volume et les pannes matérielles restent nécessaires. Extension du 2026-08-11 : trois
+  terminaisons subprocess prouvent la réparation après commit `Finalizing`, après move et après
+  commit `Completed`, sans état final ambigu ni perte du contenu.
 
 ## 5. Résultat de la porte G1
 

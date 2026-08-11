@@ -156,3 +156,7 @@ La tranche reprise/finalisation porte la suite à 122 tests fonctionnels. Elle a
 lecture de recouvrement et un flux reprenant au checkpoint ; aucune mesure de débit, coût de `fsync`,
 latence du move, mémoire ou performance sur gros fichier n’a été exécutée. Aucun gain de performance
 n’est revendiqué.
+
+Les trois scénarios subprocess de finalisation portent la suite à 125 tests fonctionnels. Ils
+mesurent des propriétés de durabilité et non la latence de finalisation ; aucune conclusion de
+performance ne peut être tirée de leur durée.

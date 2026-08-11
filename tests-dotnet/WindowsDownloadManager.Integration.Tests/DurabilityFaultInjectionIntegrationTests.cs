@@ -195,6 +195,33 @@ public sealed class DurabilityFaultInjectionIntegrationTests
             TemporaryFileReconciliationStatus.TemporaryFileMatchesCheckpoint,
             expectedSafePosition: 70_000);
 
+    [TestMethod]
+    public Task Finalize_ProcessKilledAfterFinalizingCommit_RepairMovesTemporaryAndCompletes() =>
+        AssertFinalizationAbruptTerminationAsync(
+            "AfterFinalizingCommit",
+            DownloadState.Finalizing,
+            temporaryExistsBeforeRepair: true,
+            destinationExistsBeforeRepair: false,
+            repairRequired: true);
+
+    [TestMethod]
+    public Task Finalize_ProcessKilledAfterMove_RepairConfirmsDestinationAndCompletes() =>
+        AssertFinalizationAbruptTerminationAsync(
+            "AfterFinalMove",
+            DownloadState.Finalizing,
+            temporaryExistsBeforeRepair: false,
+            destinationExistsBeforeRepair: true,
+            repairRequired: true);
+
+    [TestMethod]
+    public Task Finalize_ProcessKilledAfterCompletedCommit_RestoresCompletedWithoutRepair() =>
+        AssertFinalizationAbruptTerminationAsync(
+            "AfterCompletedCommit",
+            DownloadState.Completed,
+            temporaryExistsBeforeRepair: false,
+            destinationExistsBeforeRepair: true,
+            repairRequired: false);
+
     private static async Task AssertAbruptTerminationAsync(
         string boundary,
         byte[] expectedContent,
@@ -206,6 +233,70 @@ public sealed class DurabilityFaultInjectionIntegrationTests
         var databasePath = Path.Combine(directory.Path, "downloads.sqlite3");
         var temporaryPath = Path.Combine(directory.Path, $"{boundary}.download");
         var taskId = Guid.NewGuid();
+        await RunCrashHostAsync(boundary, taskId, databasePath, temporaryPath);
+        var restored = await RestoreAsync(databasePath, taskId);
+        var reconciliation = await ReconcileAsync(restored);
+
+        Assert.AreEqual(expectedCheckpoint, restored.ConfirmedBytes);
+        Assert.AreEqual(DownloadState.Downloading, restored.State);
+        Assert.AreEqual(expectedContent.Length, new FileInfo(temporaryPath).Length);
+        CollectionAssert.AreEqual(expectedContent, await File.ReadAllBytesAsync(temporaryPath));
+        Assert.AreEqual(expectedStatus, reconciliation.Status);
+        Assert.AreEqual(expectedSafePosition, reconciliation.SafePosition);
+    }
+
+    private static async Task AssertFinalizationAbruptTerminationAsync(
+        string boundary,
+        DownloadState expectedStateBeforeRepair,
+        bool temporaryExistsBeforeRepair,
+        bool destinationExistsBeforeRepair,
+        bool repairRequired)
+    {
+        using var directory = new TemporaryDirectory();
+        var databasePath = Path.Combine(directory.Path, "downloads.sqlite3");
+        var temporaryPath = Path.Combine(directory.Path, $"{boundary}.download");
+        var destinationPath = Path.Combine(directory.Path, "fixture.bin");
+        var taskId = Guid.NewGuid();
+        await RunCrashHostAsync(boundary, taskId, databasePath, temporaryPath);
+
+        var restored = await RestoreAsync(databasePath, taskId);
+        Assert.AreEqual(expectedStateBeforeRepair, restored.State);
+        Assert.AreEqual(Content.Length, restored.ConfirmedBytes);
+        Assert.AreEqual(temporaryExistsBeforeRepair, File.Exists(temporaryPath));
+        Assert.AreEqual(destinationExistsBeforeRepair, File.Exists(destinationPath));
+        if (temporaryExistsBeforeRepair)
+        {
+            CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(temporaryPath));
+        }
+
+        if (destinationExistsBeforeRepair)
+        {
+            CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
+        }
+
+        if (repairRequired)
+        {
+            await using var repository = new SqliteDownloadRepository(databasePath);
+            var finalization = new DownloadFinalizationCoordinator(
+                new ReadOnlyTemporaryFileInspector(),
+                new AtomicTemporaryFileFinalizer(),
+                repository);
+            await finalization.RepairAsync(restored, CancellationToken.None);
+        }
+
+        var completed = await RestoreAsync(databasePath, taskId);
+        Assert.AreEqual(DownloadState.Completed, completed.State);
+        Assert.AreEqual(Content.Length, completed.ConfirmedBytes);
+        Assert.IsFalse(File.Exists(temporaryPath));
+        CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
+    }
+
+    private static async Task RunCrashHostAsync(
+        string boundary,
+        Guid taskId,
+        string databasePath,
+        string temporaryPath)
+    {
         var projectRoot = FindProjectRoot();
         var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent?.Name ?? "Release";
         var hostAssembly = Path.Combine(
@@ -249,15 +340,6 @@ public sealed class DurabilityFaultInjectionIntegrationTests
             0,
             process.ExitCode,
             $"The crash host exited normally. stdout={standardOutput}; stderr={standardError}");
-        var restored = await RestoreAsync(databasePath, taskId);
-        var reconciliation = await ReconcileAsync(restored);
-
-        Assert.AreEqual(expectedCheckpoint, restored.ConfirmedBytes);
-        Assert.AreEqual(DownloadState.Downloading, restored.State);
-        Assert.AreEqual(expectedContent.Length, new FileInfo(temporaryPath).Length);
-        CollectionAssert.AreEqual(expectedContent, await File.ReadAllBytesAsync(temporaryPath));
-        Assert.AreEqual(expectedStatus, reconciliation.Status);
-        Assert.AreEqual(expectedSafePosition, reconciliation.SafePosition);
     }
 
     private static string FindProjectRoot()

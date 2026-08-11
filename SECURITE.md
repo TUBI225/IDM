@@ -209,7 +209,7 @@ Les décorateurs de faute sont privés au projet d’intégration et ne sont pas
 Les chemins sont créés dans un répertoire temporaire isolé et aucune donnée sensible n’est utilisée.
 Le banc ne prouve ni résistance à une corruption SQLite, ni dump de crash, ni panne matérielle.
 
-L’hôte subprocess n’accepte que sept noms d’énumération et un UUID valide. Les chemins sont
+L’hôte subprocess n’accepte que dix noms d’énumération et un UUID valide. Les chemins sont
 normalisés par `Path.GetFullPath` et proviennent d’un répertoire temporaire contrôlé par le parent.
 Le lancement désactive le shell, masque la fenêtre et ne transporte aucun secret. Le mécanisme de
 terminaison est absent des assemblies du produit.
@@ -221,3 +221,6 @@ repris conserve `Accept-Encoding: identity` et les validateurs HTTP. La finalisa
 absolus, refuse l’écrasement et les volumes différents, et bloque si l’état disque est ambigu. Le
 verrou actuel est limité à une instance ; l’exclusion mutuelle inter-processus du futur hôte reste
 une exigence de sécurité et d’intégrité ouverte.
+
+Les trois frontières de finalisation réutilisent exclusivement les adaptateurs réels Storage/SQLite.
+Elles ne reçoivent aucun secret, refusent l’écrasement et vérifient le contenu après réparation.

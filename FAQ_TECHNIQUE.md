@@ -206,8 +206,9 @@ Oui, dans le cas sûr actuellement couvert : temporaire exactement au checkpoint
 compatible, support Range conservé et recouvrement identique. Il reprend au checkpoint, confirme
 chaque bloc après flush puis passe à `Verifying`. Toute divergence reste bloquante et sans mutation.
 
-### 5.10 La finalisation est-elle complètement résistante aux crashs ?
+### 5.12 La finalisation est-elle complètement résistante aux crashs ?
 
-Pas encore. Le moteur persiste `Finalizing`, renomme sans écraser sur le même volume, persiste
-`Completed` et sait réparer les deux états disque non ambigus. Les crashs subprocess aux frontières,
-le hash final et les copies inter-volumes restent à prouver.
+Partiellement. Le moteur persiste `Finalizing`, renomme sans écraser sur le même volume et persiste
+`Completed`. Trois arrêts subprocess prouvent la réparation après intention, après move et après
+commit final. Le hash final, les copies inter-volumes, le reboot Windows et les pannes matérielles
+restent à prouver.

@@ -31,7 +31,9 @@ internal static class Program
         await using var innerRepository = new SqliteDownloadRepository(databasePath);
         IDownloadRepository repository = IsCheckpointBoundary(boundary)
             ? new TerminatingRepository(innerRepository, boundary, targetOperation)
-            : innerRepository;
+            : IsFinalizationRepositoryBoundary(boundary)
+                ? new TerminatingFinalizationRepository(innerRepository, boundary)
+                : innerRepository;
         ITemporaryFileWriter writer = IsWriterBoundary(boundary)
             ? new TerminatingWriter(
                 new DurableTemporaryFileWriter(),
@@ -49,6 +51,18 @@ internal static class Program
             destinationPath);
 
         await orchestrator.RunNewAsync(task, temporaryPath, CancellationToken.None);
+        if (IsFinalizationBoundary(boundary))
+        {
+            ITemporaryFileFinalizer finalizer = boundary == CrashBoundary.AfterFinalMove
+                ? new TerminatingFinalizer(new AtomicTemporaryFileFinalizer())
+                : new AtomicTemporaryFileFinalizer();
+            var finalization = new DownloadFinalizationCoordinator(
+                new ReadOnlyTemporaryFileInspector(),
+                finalizer,
+                repository);
+            await finalization.FinalizeAsync(task, CancellationToken.None);
+        }
+
         return 3;
     }
 
@@ -74,6 +88,15 @@ internal static class Program
             CrashBoundary.AfterSecondBlockDurableFlush or
             CrashBoundary.BeforeSecondCheckpointCommit or
             CrashBoundary.AfterSecondCheckpointCommit;
+
+    private static bool IsFinalizationBoundary(CrashBoundary boundary) =>
+        boundary is CrashBoundary.AfterFinalizingCommit or
+            CrashBoundary.AfterFinalMove or
+            CrashBoundary.AfterCompletedCommit;
+
+    private static bool IsFinalizationRepositoryBoundary(CrashBoundary boundary) =>
+        boundary is CrashBoundary.AfterFinalizingCommit or
+            CrashBoundary.AfterCompletedCommit;
 
     private static bool IsWriterBoundary(CrashBoundary boundary) =>
         boundary is CrashBoundary.AfterDurableFlush or
@@ -193,6 +216,40 @@ internal static class Program
         }
     }
 
+    private sealed class TerminatingFinalizationRepository(
+        IDownloadRepository inner,
+        CrashBoundary boundary) : IDownloadRepository
+    {
+        public ValueTask<DownloadTask?> FindAsync(Guid id, CancellationToken cancellationToken) =>
+            inner.FindAsync(id, cancellationToken);
+
+        public async ValueTask SaveAsync(DownloadTask task, CancellationToken cancellationToken)
+        {
+            await inner.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+            if ((boundary == CrashBoundary.AfterFinalizingCommit &&
+                 task.State == DownloadState.Finalizing) ||
+                (boundary == CrashBoundary.AfterCompletedCommit &&
+                 task.State == DownloadState.Completed))
+            {
+                TerminateAbruptly();
+            }
+        }
+    }
+
+    private sealed class TerminatingFinalizer(ITemporaryFileFinalizer inner) : ITemporaryFileFinalizer
+    {
+        public async ValueTask MoveAtomicallyAsync(
+            string temporaryPath,
+            string destinationPath,
+            CancellationToken cancellationToken)
+        {
+            await inner
+                .MoveAtomicallyAsync(temporaryPath, destinationPath, cancellationToken)
+                .ConfigureAwait(false);
+            TerminateAbruptly();
+        }
+    }
+
     private enum CrashBoundary
     {
         AfterDurableFlush,
@@ -202,5 +259,8 @@ internal static class Program
         AfterSecondBlockDurableFlush,
         BeforeSecondCheckpointCommit,
         AfterSecondCheckpointCommit,
+        AfterFinalizingCommit,
+        AfterFinalMove,
+        AfterCompletedCommit,
     }
 }

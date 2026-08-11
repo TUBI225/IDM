@@ -1505,6 +1505,89 @@ Aucun commit créé : identité Git non configurée et dépôt toujours sans bas
 
 ---
 
+## 2026-08-11 — M-007/Q-001/ADR-029 — Crashs subprocess de finalisation
+
+### Objectif
+
+Prouver les états réparables aux trois frontières `Finalizing → move → Completed` après une
+terminaison brutale réelle du processus, puis vérifier la convergence vers un fichier exact et un
+état SQLite `Completed`.
+
+### État avant intervention
+
+La finalisation et sa réparation étaient couvertes en processus, mais aucune interruption subprocess
+n’avait prouvé la persistance réelle autour du move. La baseline canonique était de 122 tests.
+
+### Travail effectué
+
+- Ajout des frontières `AfterFinalizingCommit`, `AfterFinalMove` et `AfterCompletedCommit` au
+  `WindowsDownloadManager.CrashTestHost`.
+- Terminaison après commit de l’intention, après move réel et après commit final.
+- Réouverture séparée de SQLite par le parent après chaque mort du subprocess.
+- Réparation avec les vrais adaptateurs lorsque SQLite reste en `Finalizing`.
+- Vérification exacte du contenu, de l’absence/présence des deux chemins et de l’état final.
+
+### Fichiers créés ou supprimés
+
+Aucun.
+
+### Fichiers de code modifiés
+
+- `tests-dotnet/WindowsDownloadManager.CrashTestHost/Program.cs`
+- `tests-dotnet/WindowsDownloadManager.Integration.Tests/DurabilityFaultInjectionIntegrationTests.cs`
+
+### Décisions et invariants
+
+Aucun nouvel ADR. Le harnais applique ADR-029 sans instrumentation de production. Après intention,
+le temporaire seul est déplacé par réparation. Après move, la destination seule est confirmée sans
+second move. Après commit final, aucune réparation n’est lancée. Les états ambigus restent bloqués.
+
+### Tests exécutés et résultats
+
+- Integration ciblé Release : 19 exécutés, 19 réussis, 0 échec, 0 ignoré en 32,185 s.
+- Vérification canonique `eng/verify.ps1` : restauration hors ligne RÉUSSIE ; compilation Release
+  0 avertissement/0 erreur ; 125 exécutés, 125 réussis, 0 échec, 0 ignoré en 23,175 s ; formatage
+  RÉUSSI ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
+- SHA-256, disque plein, antivirus/verrou, inter-volume, panne électrique et reboot Windows :
+  NON EXÉCUTÉS ; résultat inconnu.
+
+### Risques et statut réel
+
+R-011/R-021 sont réduits mais restent ouverts. La tranche est RÉUSSIE pour les trois frontières de
+processus, sans valider les pannes matérielles ou l’intégrité cryptographique finale.
+
+### Prochaine action
+
+Ajouter le calcul SHA-256 streaming du temporaire avant `Finalizing`, comparer une empreinte attendue
+si disponible et refuser la finalisation sur divergence.
+
+### Commit associé
+
+Commit `test: cover finalization crash boundaries` sur `main`.
+
+### Contrôle documentaire
+
+| Document | État | Action |
+|---|---|---|
+| Cahier_des_charges.md | MIS À JOUR | Trois frontières et limites |
+| FEUILLE_DE_ROUTE.md | MIS À JOUR | M-007/Q-001/G2 et prochaine action |
+| SUIVI_DEVELOPPEMENT.md | MIS À JOUR | Présente entrée ajoutée |
+| ARCHITECTURE_TECHNIQUE.md | MIS À JOUR | Protocole subprocess décrit |
+| REGISTRE_DES_RISQUES.md | MIS À JOUR | R-011/R-021 réduits |
+| PROTOCOLE_TEST_REPRISE.md | MIS À JOUR | Section 21 et preuves 125/125 |
+| ETAT_ACTUEL_PROJET.md | MIS À JOUR | Capacité, limites et suite |
+| DECISIONS_ARCHITECTURE.md | MIS À JOUR | Extension ADR-029 consignée |
+| REGLES_DE_CODAGE.md | MIS À JOUR | Règle des trois frontières |
+| DEPENDANCES.md | VÉRIFIÉ — NON CONCERNÉ | Aucun paquet ou verrou modifié |
+| MODELISATION_DONNEES.md | MIS À JOUR | Trois états disque/SQLite observés |
+| SECURITE.md | MIS À JOUR | Dix frontières bornées |
+| PERFORMANCES.md | MIS À JOUR | Temps fonctionnels non assimilés à un benchmark |
+| ERREURS_CONNNUES.md | MIS À JOUR | LIM-011 précisée |
+| FAQ_TECHNIQUE.md | MIS À JOUR | Résistance crash partielle expliquée |
+| INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Processus permanent inchangé |
+
+---
+
 # 2026-08-04 — 01:55 UTC — M-001/M-005/M-007/M-008 — Métadonnées persistantes de reprise
 
 ## Objectif

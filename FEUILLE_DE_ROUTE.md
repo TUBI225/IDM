@@ -50,9 +50,8 @@ Dernière mise à jour : 2026-08-10
 
 ## Prochaine action recommandée
 
-Poursuivre G2 : injecter des arrêts subprocess aux frontières de finalisation `Finalizing → move →
-Completed`, puis ajouter la vérification SHA-256 et la politique de collision. Ne pas commencer l’UI
-ni la segmentation avant ces preuves.
+Poursuivre G2 : ajouter la vérification SHA-256 avant finalisation et sa preuve de non-corruption,
+puis définir la politique de collision. Ne pas commencer l’UI ni la segmentation avant cette preuve.
 
 ## 3. Plan détaillé jusqu’à la version stable
 
@@ -78,7 +77,7 @@ navigateur ; Q la qualité et la livraison.
 | M-004 | Stockage temporaire et préallocation C# | Critique | PARTIEL | M-001 | Création, flush, reprise et move même volume testés ; disque plein/amovible restent |
 | M-005 | Dépôt SQLite et migrations C# | Critique | PARTIEL | M-001/G1 | Migration v1→v2 et métadonnées testées ; interruption/rollback/corruption restent |
 | M-006 | Pause dans la session | Critique | À VÉRIFIER | M-003/4/5 | PR-004 réussi |
-| M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise réseau et réparation `Finalizing` prouvées ; crash de finalisation et reboot restent |
+| M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise et trois frontières de finalisation prouvées ; reboot reste |
 | M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, recouvrement et reprise comparés ; hash final reste |
 | M-009 | SegmentManager statique | Haute | À FAIRE | M-007/8 | couverture exacte sans trou/chevauchement |
 | M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
@@ -92,7 +91,7 @@ navigateur ; Q la qualité et la livraison.
 | W-003 | Notifications et erreurs | Normale | À FAIRE | W-002 | messages actionnables et expurgés |
 | B-001 | Protocole Native Messaging | Haute | À FAIRE | D-001/SEC | schéma versionné et origine validée |
 | B-002 | Extensions Chrome/Edge | Normale | À FAIRE | B-001 | permissions minimales et désactivation par site |
-| Q-001 | Batterie reprise/chaos | Critique | PARTIEL | M-011/12 | Sept crashs subprocess sur un/deux blocs prouvés ; erreur pendant écriture et chaos matériel restent |
+| Q-001 | Batterie reprise/chaos | Critique | PARTIEL | M-011/12 | Dix crashs subprocess transfert/finalisation prouvés ; chaos matériel reste |
 | Q-002 | Audit sécurité | Critique | À FAIRE | B-002/W-003 | aucun critique ouvert non accepté |
 | Q-003 | Bancs performances | Haute | À FAIRE | M-015 | seuils publiés sur profils définis |
 | Q-004 | Installateur et signature | Haute | À FAIRE | W/B/Q | install/update/rollback/uninstall testés |
@@ -108,7 +107,7 @@ navigateur ; Q la qualité et la livraison.
   audit sans vulnérabilité détectée et 14 tests .NET standardisés réussis.
 - G2 Moteur direct durable : PARTIEL le 2026-08-10 ; réseau anti-rebind, writer, SQLite v2,
   téléchargement neuf, reprise réseau, finalisation même volume et réparation `Finalizing` sont
-  testés, mais hash final, crash de finalisation, écriture partielle et panne matérielle restent.
+  testés avec trois crashs de finalisation, mais hash final, écriture partielle et panne matérielle restent.
 - J1 Moteur fiable : M-002 à M-008 sans risque critique d’intégrité non traité.
 - J2 Accélération : segmentation et reprise renforcée prouvées avant toute promesse de vitesse.
 - J3 Produit Windows : UI, navigateur et installateur sans couplage au moteur.

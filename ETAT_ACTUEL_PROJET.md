@@ -46,7 +46,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  122 tests distincts réussissent après l’ajout de la reprise et de la finalisation.
+  125 tests distincts réussissent après l’ajout des crashs subprocess de finalisation.
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v2 : migrations v1/v2 checksummées, WAL,
@@ -85,7 +85,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 ### Limites C# actuelles
 
 - La sérialisation est limitée à l’instance d’orchestrateur/coordinateur ; l’exclusion mutuelle du
-  futur `DownloadHost`, le hash final et les crashs subprocess de finalisation restent absents.
+  futur `DownloadHost`, le hash final et les crashs matériels restent absents.
 - Aucun projet WinUI, ordonnanceur, segmentation, extension ou installateur.
 - Le rebinding vers loopback est bloqué ; proxy, NAT64/IPv6 adverses, TLS public, limites d’en-têtes
   et corps HTTP malformés restent incomplets.
@@ -175,5 +175,5 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-Poursuivre G2 : tester par subprocess les crashs avant/après le renommage final, ajouter la
-vérification SHA-256 et définir la politique de collision et de copie vérifiée entre volumes.
+Poursuivre G2 : ajouter la vérification SHA-256 avant finalisation, puis définir la politique de
+collision et le protocole de copie vérifiée entre volumes.

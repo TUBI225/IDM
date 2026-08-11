@@ -451,3 +451,17 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   Integration 16/16, 0 échec, 0 ignoré.
 - Limites : hash SHA-256, crash subprocess avant/après move, volumes différents, disque plein,
   antivirus et reboot Windows non exécutés ; résultat inconnu.
+
+## 21. Crashs subprocess de finalisation — 2026-08-11
+
+- Identifiants : M-007 / Q-001 / F-018 / ADR-029.
+- Pile : CSHARP-CIBLE.
+- Frontière A : tuer après commit `Finalizing`, avant move. Oracle avant réparation : SQLite
+  `Finalizing`, temporaire exact présent, destination absente. Oracle final : `Completed`, destination exacte.
+- Frontière B : tuer après move, avant commit `Completed`. Oracle avant réparation : SQLite
+  `Finalizing`, temporaire absent, destination exacte. Oracle final : `Completed` sans second move.
+- Frontière C : tuer après commit `Completed`. Oracle : SQLite `Completed`, temporaire absent,
+  destination exacte ; aucune réparation nécessaire.
+- Test ciblé Integration Release : 19 exécutés, 19 réussis, 0 échec, 0 ignoré en 32,185 s.
+- Limites : SHA-256, disque plein, verrou antivirus, copie inter-volume, panne électrique et reboot
+  Windows non exécutés ; résultat inconnu.

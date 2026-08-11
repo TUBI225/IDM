@@ -99,7 +99,7 @@ de sécurité bloque la publication jusqu’à décision explicite.
 ## LIM-011 — Finalisation partielle au même volume
 
 - Statut : CONFIRMÉE — 2026-08-10.
-- Effet : le move même volume et la réparation non ambiguë sont présents, mais le SHA-256, les crashs
-  subprocess de finalisation, la copie inter-volume et l’exclusion mutuelle du futur hôte manquent.
+- Effet : le move même volume, la réparation non ambiguë et trois crashs subprocess sont présents,
+  mais le SHA-256, la copie inter-volume et l’exclusion mutuelle du futur hôte manquent.
 - Contournement : ne pas présenter la finalisation comme complète et bloquer volumes/collisions ambigus.
-- Clôture : tests de toutes les frontières ADR-029, hash final et protocole inter-volume validés.
+- Clôture : hash final, protocole inter-volume et pannes matérielles ADR-029 validés.

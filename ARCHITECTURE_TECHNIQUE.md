@@ -414,5 +414,7 @@ subsiste ou confirme `Completed` si seule la destination existe. Les deux chemin
 sont ambigus et provoquent un arrêt sûr. `AtomicTemporaryFileFinalizer` appartient à Storage et refuse
 l’écrasement ainsi que les volumes différents.
 
-La sérialisation inter-instance/processus, le SHA-256, la copie inter-volume et les crashs subprocess
-aux frontières de finalisation restent requis avant de considérer cette chaîne complète.
+Trois terminaisons subprocess couvrent désormais l’intention `Finalizing` persistée, le move effectué
+avant `Completed` et le commit `Completed`. Le parent rouvre SQLite, vérifie les deux chemins et
+exécute la réparation lorsque nécessaire. La sérialisation inter-processus, le SHA-256, la copie
+inter-volume et les pannes matérielles restent requis avant de considérer cette chaîne complète.

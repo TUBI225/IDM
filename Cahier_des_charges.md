@@ -65,8 +65,9 @@ Utilisateurs Windows téléchargeant des fichiers volumineux ou sur des connexio
   `flush → checkpoint SQLite`, sur un puis deux blocs, ainsi qu’avant l’appel disque du second bloc.
   Une tâche au checkpoint exact peut maintenant être reprise par plage HTTP après recouvrement ; la
   finalisation persiste `Finalizing`, renomme sans écraser sur le même volume, persiste `Completed`
-  et répare prudemment l’état si un seul chemin subsiste. Le crash pendant une écriture ou une
-  finalisation, le SHA-256 final, le redémarrage Windows, les autres volumes et l’interface restent.
+  et répare prudemment l’état si un seul chemin subsiste. Trois arrêts subprocess prouvent les états
+  après intention, après move et après commit final. Le crash pendant une écriture, le SHA-256 final,
+  le redémarrage Windows, les autres volumes et l’interface restent.
 
 ## Critères de réussite du premier jalon
 

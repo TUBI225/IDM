@@ -256,3 +256,7 @@ le même checkpoint durable jusqu’à `Verifying`. La finalisation réutilise l
 `Verifying → Finalizing` est persisté avant le move, puis `Finalizing → Completed` après le move.
 Une réparation de `Finalizing` considère temporaire seul et destination seule comme états non ambigus ;
 les deux présents ou les deux absents restent bloquants.
+
+Les terminaisons subprocess du 2026-08-11 observent les trois états attendus sans migration :
+`Finalizing + temporaire seul`, `Finalizing + destination seule`, puis `Completed + destination seule`.
+Les deux premiers convergent vers `Completed` après réparation ; le troisième est déjà terminal.

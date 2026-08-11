@@ -54,10 +54,10 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - redirections manuelles, validation URI/DNS préalable et classification 416/429/5xx ;
 - transfert neuf et reprise à connexion unique avec ordre `flush disque → checkpoint SQLite` ;
 - finalisation sans écrasement et réparation de l’état `Finalizing` ;
-- 122 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- 125 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
-Restent notamment à ajouter le SHA-256 final, la copie vérifiée entre volumes, les crashs de
-finalisation en subprocess, le reboot Windows, l’interface, la segmentation et l’installateur.
+Restent notamment à ajouter le SHA-256 final, la copie vérifiée entre volumes, le reboot Windows,
+l’interface, la segmentation et l’installateur.
 
 ## Exécution
 

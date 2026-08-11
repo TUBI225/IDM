@@ -162,3 +162,5 @@ l’ajout ou la mise à jour concernée.
 - `Finalizing` est persisté avant le move ; `Completed` seulement après sa réussite.
 - Une finalisation ne doit jamais écraser une destination et bloque tout état de réparation ambigu.
 - Un move qualifié d’atomique doit rester sur le même volume ; toute copie inter-volume est un autre protocole.
+- Chaque frontière de finalisation doit être prouvée dans un subprocess : intention persistée, move
+  effectué et état final persisté ; le parent rouvre toujours SQLite avant toute réparation.
