@@ -497,5 +497,38 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   26,864 s ; build 0 avertissement/0 erreur, formatage et documentation réussis.
 - La tranche empreinte distante du 2026-08-11 porte la suite à 164 tests : build Release 0 erreur,
   164/164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage sans changement ; documentation réussie.
+- Le harnais inter-volume réel du 2026-08-11 (destination explicite au CrashTestHost, script
+  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 166 tests :
+  166/166 réussis, 0 échec, 0 ignoré en 37 s ; formatage sans changement ; documentation réussie.
 - Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
   reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.
+
+## 24. Inter-volume réel — protocole d'exécution (2026-08-11)
+
+- Identifiants : M-004 / M-007 / F-018 / ADR-029.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- Prérequis : **deux volumes** fixes ou amovibles montés (ex. `C:` système et clé USB `E:`).
+  Sans second volume, le script affiche les instructions (brancher un disque/USB, ou monter un
+  VHDX via `New-VHD`/`Mount-VHD`).
+- Harnais : `WindowsDownloadManager.CrashTestHost` accepte désormais un **chemin de destination
+  explicite** en 5ᵉ argument (au lieu de dériver la destination du dossier du temporaire) ; le flag
+  `--different-volume` reste disponible pour la simulation et peut être passé à n'importe quelle
+  position. Avec destination explicite sur un second volume réel et sans flag, le comparateur
+  `PathRootFileVolumeComparer` détecte les volumes distincts réels et déclenche le protocole de copie
+  inter-volume réel.
+- Exécution :
+  ```
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\eng\run-intervolume-real.ps1 -VolumeA C -VolumeB E
+  ```
+- Scénarios : `AfterInterVolumeStagingFlushed` et `AfterInterVolumeDestinationMoved`, chacun avec
+  temporaire sur le volume source et destination sur le volume cible, puis terminaison abrupte du
+  subprocess.
+- Critères de validation (par scénario) :
+  - exit code du subprocess non nul (crash effectif) ;
+  - source absente, destination présente et de contenu exact `hello` ;
+  - base SQLite restaurée en `DownloadState.Finalizing`.
+- Réparation : `Finalizing → Completed` reste du ressort du futur `DownloadHost` via
+  `DownloadFinalizationCoordinator.RepairAsync` ; le chemin est couvert par les tests d'intégration
+  (section 23 et scénarios subprocess inter-volume simulés).
+- Compléments non exécutés sur matériel réel : disque plein pendant la copie, retrait du volume en
+  cours d'écriture, antivirus/verrou, reparse point concurrent et panne électrique. Résultat inconnu.

@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 164/164 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 166/166 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3498,4 +3498,45 @@ sans changement, contrôle documentaire réussi. LIM-012 résolue.
 | MODELISATION_DONNEES.md | MIS À JOUR | RemoteIdentity.Sha256 documenté |
 | SECURITE.md | MIS À JOUR | Mode forcé et validation SHA-256 précisés |
 | ERREURS_CONNNUES.md | MIS À JOUR | LIM-012 marquée CORRIGÉE |
+
+
+---
+
+# Entrée 2026-08-11 — Harnais inter-volume réel et protocole d'exécution
+
+## Objectif
+
+Préparer l'exécution du protocole inter-volume sur deux volumes physiques : destination explicite
+au CrashTestHost, script de lancement `eng/run-intervolume-real.ps1`, scénarios subprocess et
+critères de validation.
+
+## Travail réalisé
+
+- `WindowsDownloadManager.CrashTestHost` : `destinationPath` explicite en 5e argument (compatible :
+  dérivation depuis le temporaire conservée si absent) ; flag `--different-volume` détecté a n'importe
+  quelle position. Avec destination sur un second volume réel, `PathRootFileVolumeComparer` déclenche
+  le protocole de copie inter-volume réel.
+- `DurabilityFaultInjectionIntegrationTests` : deux scénarios subprocess
+  (`AfterInterVolumeStagingFlushed`, `AfterInterVolumeDestinationMoved`) avec destination explicite
+  et comparateur simulé ; réparation `Finalizing -> Completed` vérifiée.
+- `eng/run-intervolume-real.ps1` : détection de deux volumes, instructions (USB ou VHDX) si un seul,
+  compilation Release du harnais si absent, exécution des deux scénarios avec temporaire sur le
+  volume source et destination sur le volume cible, vérification des critères, rapport dans
+  `TestResults\intervolume-real-report.txt`.
+- `PROTOCOLE_TEST_REPRISE.md` : section 24 « Inter-volume réel — protocole d'exécution ».
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 166/166 tests réussis, 0 échec, 0 ignoré en 37 s ;
+formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
+réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
+
+## État final de la tâche
+
+SUCCÈS (harnais et protocole prêts) ; exécution matérielle réelle en attente d'un second volume.
+
+## Prochaine action
+
+Exécuter `.\eng\run-intervolume-real.ps1 -VolumeA C -VolumeB <lettre>` avec un second volume monté,
+puis compléter le chaos matériel (disque plein, retrait, antivirus, reparse point, panne électrique).
 

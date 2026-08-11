@@ -223,6 +223,14 @@ public sealed class DurabilityFaultInjectionIntegrationTests
             destinationExistsBeforeRepair: true,
             repairRequired: false);
 
+    [TestMethod]
+    public Task Finalize_ProcessKilledAfterInterVolumeStagingFlushed_RepairCompletes() =>
+        AssertInterVolumeFinalizationAbruptTerminationAsync("AfterInterVolumeStagingFlushed");
+
+    [TestMethod]
+    public Task Finalize_ProcessKilledAfterInterVolumeDestinationMoved_RepairCompletes() =>
+        AssertInterVolumeFinalizationAbruptTerminationAsync("AfterInterVolumeDestinationMoved");
+
     private static async Task AssertAbruptTerminationAsync(
         string boundary,
         byte[] expectedContent,
@@ -295,11 +303,51 @@ public sealed class DurabilityFaultInjectionIntegrationTests
         CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
     }
 
+    private static async Task AssertInterVolumeFinalizationAbruptTerminationAsync(string boundary)
+    {
+        using var directory = new TemporaryDirectory();
+        var databasePath = Path.Combine(directory.Path, "downloads.sqlite3");
+        var temporaryPath = Path.Combine(directory.Path, $"{boundary}.download");
+        var destinationPath = Path.Combine(directory.Path, "fixture.bin");
+        var taskId = Guid.NewGuid();
+        await RunCrashHostAsync(
+            boundary,
+            taskId,
+            databasePath,
+            temporaryPath,
+            destinationPath,
+            simulateDifferentVolume: true);
+
+        var restored = await RestoreAsync(databasePath, taskId);
+        Assert.AreEqual(DownloadState.Finalizing, restored.State);
+        Assert.AreEqual(Content.Length, restored.ConfirmedBytes);
+        Assert.AreEqual(ContentSha256, restored.VerifiedSha256);
+        Assert.IsFalse(File.Exists(temporaryPath));
+        CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
+
+        await using var repository = new SqliteDownloadRepository(databasePath);
+        var finalization = new DownloadFinalizationCoordinator(
+            new ReadOnlyTemporaryFileInspector(),
+            new Sha256TemporaryFileHasher(),
+            new AtomicTemporaryFileFinalizer(new SimulatedDifferentVolumeComparer()),
+            repository);
+        await finalization.RepairAsync(restored, CancellationToken.None);
+
+        var completed = await RestoreAsync(databasePath, taskId);
+        Assert.AreEqual(DownloadState.Completed, completed.State);
+        Assert.AreEqual(Content.Length, completed.ConfirmedBytes);
+        Assert.AreEqual(ContentSha256, completed.VerifiedSha256);
+        Assert.IsFalse(File.Exists(temporaryPath));
+        CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
+    }
+
     private static async Task RunCrashHostAsync(
         string boundary,
         Guid taskId,
         string databasePath,
-        string temporaryPath)
+        string temporaryPath,
+        string? destinationPath = null,
+        bool simulateDifferentVolume = false)
     {
         var projectRoot = FindProjectRoot();
         var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent?.Name ?? "Release";
@@ -325,6 +373,16 @@ public sealed class DurabilityFaultInjectionIntegrationTests
         startInfo.ArgumentList.Add(taskId.ToString("D"));
         startInfo.ArgumentList.Add(databasePath);
         startInfo.ArgumentList.Add(temporaryPath);
+        if (destinationPath is not null)
+        {
+            startInfo.ArgumentList.Add(destinationPath);
+        }
+
+        if (simulateDifferentVolume)
+        {
+            startInfo.ArgumentList.Add("--different-volume");
+        }
+
         using var process = Process.Start(startInfo) ??
             throw new AssertFailedException("The crash test host could not be started.");
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -497,4 +555,9 @@ public sealed class DurabilityFaultInjectionIntegrationTests
     }
 
     private sealed class InjectedDurabilityFaultException(string message) : IOException(message);
+
+    private sealed class SimulatedDifferentVolumeComparer : IFileVolumeComparer
+    {
+        public bool AreOnSameVolume(string firstPath, string secondPath) => false;
+    }
 }

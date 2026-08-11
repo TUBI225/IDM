@@ -61,7 +61,7 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
   `x-goog-hash`, `x-amz-checksum-sha256`), persistée dans une colonne dédiée et vérifiée à la finalisation
   (mode strict par défaut, forçage explicite possible) ;
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
-- 164 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- 166 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, l’interface, la segmentation et l’installateur.

@@ -14,7 +14,7 @@ internal static class Program
 
     public static async Task<int> Main(string[] args)
     {
-        if (args.Length != 4 ||
+        if (args.Length < 4 ||
             !Enum.TryParse<CrashBoundary>(args[0], ignoreCase: false, out var boundary) ||
             !Guid.TryParse(args[1], out var taskId))
         {
@@ -25,9 +25,11 @@ internal static class Program
         var temporaryPath = Path.GetFullPath(args[3]);
         var content = IsSecondBlockBoundary(boundary) ? LargeContent : SmallContent;
         var targetOperation = IsSecondBlockBoundary(boundary) ? 2 : 1;
-        var destinationPath = Path.Combine(
-            Path.GetDirectoryName(temporaryPath) ?? throw new InvalidDataException(),
-            "fixture.bin");
+        var destinationPath = args.Length > 4 && !args[4].StartsWith("--", StringComparison.Ordinal)
+            ? Path.GetFullPath(args[4])
+            : Path.Combine(
+                Path.GetDirectoryName(temporaryPath) ?? throw new InvalidDataException(),
+                "fixture.bin");
         await using var innerRepository = new SqliteDownloadRepository(databasePath);
         IDownloadRepository repository = IsCheckpointBoundary(boundary)
             ? new TerminatingRepository(innerRepository, boundary, targetOperation)
@@ -50,8 +52,11 @@ internal static class Program
             new Uri("https://example.test/fixture.bin"),
             destinationPath);
 
-        var isDifferentVolume = args.Length > 4 && string.Equals(args[4], "--different-volume", StringComparison.OrdinalIgnoreCase);
-        IFileVolumeComparer volumeComparer = isDifferentVolume ? new SimulatedDifferentVolumeComparer() : new PathRootFileVolumeComparer();
+        var simulateDifferentVolume = args.Any(argument =>
+            string.Equals(argument, "--different-volume", StringComparison.OrdinalIgnoreCase));
+        IFileVolumeComparer volumeComparer = simulateDifferentVolume
+            ? new SimulatedDifferentVolumeComparer()
+            : new PathRootFileVolumeComparer();
         await orchestrator.RunNewAsync(task, temporaryPath, CancellationToken.None);
         if (IsFinalizationBoundary(boundary))
         {
