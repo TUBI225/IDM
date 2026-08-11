@@ -63,7 +63,7 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
 - segmentation multiple statique : planneur de plages disjointes/couvrantes, transfert segmenté
   parallèle (une connexion par segment) et repli connexion unique ;
-- 218 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- 225 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, la reprise segmentée, l’interface et l’installateur.

@@ -171,7 +171,7 @@ s’ajoute la vérification Application. Le buffer de copie est borné à 128 Ki
 deux disques, amplification I/O, CPU, mémoire ou gros fichier n’a été mesuré. Cette preuve est
 fonctionnelle et aucune performance n’est revendiquée.
 
-La tranche empreinte distante porte la suite à 218 tests fonctionnels. Le coût ajouté est l’extraction
+La tranche empreinte distante porte la suite à 225 tests fonctionnels. Le coût ajouté est l’extraction
 d’en-têtes HTTP et une colonne SQLite supplémentaire ; il n’affecte pas le chemin de transfert. Aucun
 profil 1/10/100 Gio, coût CPU, débit disque ou gros fichier n’a été mesuré pour cette tranche. R-010
 reste ouvert et aucune performance n’est revendiquée.

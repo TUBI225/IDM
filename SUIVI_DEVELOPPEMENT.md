@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 218/218 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 225/225 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3566,7 +3566,7 @@ parallèle et assembler un fichier exact, avec repli sûr sur la connexion uniqu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
 
 ## État final de la tâche
@@ -3607,7 +3607,7 @@ délai) avec backoff exponentiel et gigue, en respectant le `Retry-After` serveu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3641,7 +3641,7 @@ transfert parallèle de la portion restante.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3676,7 +3676,7 @@ priorités) et M-015 (débit).
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré en
 57 s ; formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3708,7 +3708,7 @@ Arbitrer les tâches à lancer : priorités, équité (anti-famine) et limite de
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré ;
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré ;
 formatage sans changement ; contrôle documentaire réussi (M-014 -> PARTIEL).
 
 ## État final de la tâche
@@ -3719,6 +3719,39 @@ SUCCÈS (partiel) : file prioritaire, limite globale et anti-famine testés. L'i
 ## Prochaine action
 
 M-015 (débit global/tâche/domaine), puis M-010 (redistribution dynamique) et M-011/M-012 (reprise).
+
+---
+
+# Entrée 2026-08-11 — Contrôle de débit global/tâche/domaine (M-015)
+
+## Objectif
+
+Limiter le débit de téléchargement aux niveaux global, tâche et domaine.
+
+## Travail réalisé
+
+- `BandwidthController` (Application) : seaux à jetons hiérarchiques global / par tâche / par
+  domaine ; `AcquireAsync(taskId, domain, byteCount)` attend la plus longue des attentes nécessaires
+  (tous les seaux concernés) puis consomme les jetons.
+- Réapprovisionnement paresseux (temps écoulé × débit, plafonné au burst) ; horloge et attente
+  injectables pour des tests déterministes.
+- Tests : 7 `BandwidthControllerTests` (sous la limite, throttling global, indépendance
+  tâche/domaine, partage global, octets nuls, burst invalide).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (M-015 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : seaux global/tâche/domaine testés. La mesure de débit réelle (Q-003) et
+l'intégration au futur `DownloadHost` restent.
+
+## Prochaine action
+
+M-010 (redistribution dynamique de la segmentation), puis M-011/M-012 (reprise et retransmission).
+
 
 
 

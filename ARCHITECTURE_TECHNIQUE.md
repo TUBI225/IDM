@@ -498,3 +498,13 @@ cas d'égalité) tant que la limite de concurrence globale n'est pas atteinte ; 
 créneau. L'anti-famine par vieillissement augmente progressivement la priorité effective des tâches
 en attente (au-delà d'un intervalle), garantissant qu'une basse priorité finit par passer même en
 présence d'afflux de hautes priorités. L'intégration au futur `DownloadHost` reste à construire.
+
+## Extension J2 — contrôle de débit global/tâche/domaine (2026-08-11)
+
+`BandwidthController` (Application) applique des seaux à jetons hiérarchiques : une limite globale,
+une limite par tâche et une limite par domaine (hôte). Chaque `AcquireAsync(taskId, domain, byteCount)`
+attend le temps nécessaire pour que tous les seaux concernés disposent des jetons (la plus longue
+attente domine), puis consomme les jetons. Le réapprovisionnement est calculé paresseusement à partir
+d'une horloge injectable (temps écoulé × débit, plafonné au burst), et l'attente est délégable
+(injectable) pour les tests. La mesure réelle du débit sur gros fichiers (Q-003) et l'intégration au
+futur `DownloadHost` restent.

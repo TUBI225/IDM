@@ -86,7 +86,7 @@ navigateur ; Q la qualité et la livraison.
 | M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |
 | M-013 | RetryManager et Retry-After | Haute | PARTIEL | M-003 | Classifieur 429/5xx, backoff exponentiel, gigue et Retry-After testés ; intégration hôte reste |
 | M-014 | Scheduler et priorités | Normale | PARTIEL | M-009 | File prioritaire, limite globale et anti-famine par vieillissement testés ; intégration hôte reste |
-| M-015 | BandwidthController | Normale | À FAIRE | M-014 | débit global/tâche/domaine mesuré |
+| M-015 | BandwidthController | Normale | PARTIEL | M-014 | Seaux à jetons global/tâche/domaine testés ; mesure de débit réelle reste |
 | W-001 | Shell UI séparé | Haute | À FAIRE | D-004/M-001 | aucune dépendance UI→stockage |
 | W-002 | Liste, détail et commandes | Haute | À FAIRE | W-001 | parcours clavier/lecteur d’écran |
 | W-003 | Notifications et erreurs | Normale | À FAIRE | W-002 | messages actionnables et expurgés |
