@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 204/204 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 210/210 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en 34 s ;
+Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3566,8 +3566,8 @@ parallèle et assembler un fichier exact, avec repli sûr sur la connexion uniqu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
-1 m 10 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
+Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+53 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
 
 ## État final de la tâche
 
@@ -3607,7 +3607,7 @@ délai) avec backoff exponentiel et gigue, en respectant le `Retry-After` serveu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en 34 s ;
+Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3619,6 +3619,42 @@ testés. L'ordonnancement global des retries multi-tâches (future file de tél�
 
 Reprise segmentée interrompue (M-009), puis M-014 (file, priorités et limites globales) et M-015
 (débit).
+
+---
+
+# Entrée 2026-08-11 — Reprise d'un fichier segmenté interrompu (M-009)
+
+## Objectif
+
+Reprendre une tâche segmentée interrompue sans tout recommencer : réconciliation, recouvrement puis
+transfert parallèle de la portion restante.
+
+## Travail réalisé
+
+- `DownloadOrchestrator.ResumeSegmentedAsync` : réconciliation et recouvrement identiques à la
+  reprise connexion unique (blocage sans mutation si identité contradictoire ou chevauchement non
+  concordant), puis répartition de `[ConfirmedBytes, length)` en segments contigus à offsets absolus
+  et transfert segmenté parallèle. Repli connexion unique si taille inconnue, plages non supportées
+  ou `segmentCount == 1`.
+- Tests : 6 `DownloadResumeSegmentedTests` (reprise multi-segments, replis, chevauchement bloquant,
+  déjà complet, segmentCount invalide).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+53 s ; formatage sans changement ; contrôle documentaire réussi.
+
+## État final de la tâche
+
+SUCCÈS (partiel) : segmentation multiple et reprise segmentée testées. Les plages bornées
+`bytes=start-end`, le test d'intégration HTTP réel multi-segments et M-010 (redistribution
+dynamique) restent.
+
+## Prochaine action
+
+Plages bornées `bytes=start-end` pour limiter l'envoi réseau des segments, puis M-014 (file,
+priorités) et M-015 (débit).
+
 
 
 

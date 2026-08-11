@@ -97,6 +97,96 @@ public sealed class DownloadOrchestrator
         }
     }
 
+    public async ValueTask<DownloadResumeResult> ResumeSegmentedAsync(
+        DownloadTask task,
+        int segmentCount,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        if (segmentCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(segmentCount));
+        }
+
+        if (task.State != DownloadState.Downloading)
+        {
+            throw new InvalidOperationException("Only a download persisted in Downloading state can be resumed.");
+        }
+
+        var recoveryCoordinator = _recoveryCoordinator ??
+            throw new InvalidOperationException("This orchestrator has no recovery coordinator.");
+
+        await _mutationLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var assessment = await recoveryCoordinator
+                .CoordinateAsync(task, cancellationToken)
+                .ConfigureAwait(false);
+            if (assessment.Status is not (
+                StartupRecoveryAssessmentStatus.OverlapMatched or
+                StartupRecoveryAssessmentStatus.OverlapNotRequired))
+            {
+                return new DownloadResumeResult(
+                    task.Id,
+                    DownloadResumeStatus.Blocked,
+                    task.ConfirmedBytes,
+                    task.State,
+                    assessment);
+            }
+
+            var identity = assessment.RemoteIdentity?.ObservedIdentity ??
+                throw new InvalidDataException("A resumable assessment must contain the observed remote identity.");
+            var temporaryPath = task.TemporaryPath ??
+                throw new InvalidDataException("A resumable task must contain a temporary path.");
+            var resource = new RemoteResourceInfo(
+                task.OriginalUri,
+                identity.FinalUri,
+                identity.Length,
+                SuggestedFileName: null,
+                ContentType: null,
+                identity.EntityTag,
+                identity.LastModified,
+                identity.SupportsByteRanges,
+                identity.Sha256);
+
+            if (identity.Length is null)
+            {
+                await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+            }
+            else if (task.ConfirmedBytes < identity.Length.Value)
+            {
+                if (identity.SupportsByteRanges && segmentCount > 1)
+                {
+                    var remainingLength = identity.Length.Value - task.ConfirmedBytes;
+                    var remainingSegments = SegmentPlanner.Plan(remainingLength, segmentCount)
+                        .Select(segment => new DownloadSegment(
+                            task.ConfirmedBytes + segment.StartOffset,
+                            segment.Length))
+                        .ToArray();
+                    await SegmentedTransferAsync(task, temporaryPath, resource, remainingSegments, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            await SaveAndTransitionAsync(task, DownloadState.Verifying, cancellationToken).ConfigureAwait(false);
+            return new DownloadResumeResult(
+                task.Id,
+                DownloadResumeStatus.ResumedToVerification,
+                task.ConfirmedBytes,
+                task.State,
+                assessment);
+        }
+        finally
+        {
+            _mutationLock.Release();
+        }
+    }
+
+
     public async ValueTask<DownloadRunResult> RunNewAsync(
         DownloadTask task,
         string temporaryPath,

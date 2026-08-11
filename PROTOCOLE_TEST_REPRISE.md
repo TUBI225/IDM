@@ -498,8 +498,8 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - La tranche empreinte distante du 2026-08-11 porte la suite à 164 tests : build Release 0 erreur,
   164/164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage sans changement ; documentation réussie.
 - Le harnais inter-volume réel du 2026-08-11 (destination explicite au CrashTestHost, script
-  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 204 tests :
-  204/204 réussis, 0 échec, 0 ignoré en 34 s ; formatage sans changement ; documentation réussie.
+  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 210 tests :
+  210/210 réussis, 0 échec, 0 ignoré en 53 s ; formatage sans changement ; documentation réussie.
 - Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
   reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.
 
@@ -548,10 +548,10 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Tests Application : 7/7 `DownloadOrchestratorSegmentedTests` (assemblage exact de 70 000 octets,
   repli sans plages, un segment, longueur nulle, échec d'un segment conservant le progrès contigu à
   35 000, longueur inconnue, segmentCount invalide).
-- Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
-  1 m 10 s ; formatage sans changement ; documentation 16/16.
-- Restent : reprise d'un fichier segmenté interrompu, plages bornées `bytes=start-end`, test
-  d'intégration HTTP réel multi-segments et redistribution dynamique (M-010).
+- Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+  53 s ; formatage sans changement ; documentation 16/16.
+- Restent : plages bornées `bytes=start-end`, test d'intégration HTTP réel multi-segments et
+  redistribution dynamique (M-010).
 
 ## 26. Retry des échecs transitoires — M-013 (2026-08-11)
 
@@ -566,7 +566,26 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   sans politique, propagation immédiate conservée ; reprise au progrès confirmé.
 - Tests : 7 `ExponentialBackoffRetryPolicyTests` ; 8 `HttpTransientFailureClassifierTests` ; 3 tests
   d'orchestrateur (retry d'un échec transitoire avec succès ensuite, propagation sans politique).
-- Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
-  34 s ; formatage sans changement ; documentation 16/16.
+- Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+  53 s ; formatage sans changement ; documentation 16/16.
 - Restent : ordonnancement global des retries multi-tâches (future file) et limites de connexions
   M-014.
+
+## 27. Reprise d'un fichier segmenté interrompu — M-009 (2026-08-11)
+
+- Identifiants : M-009 / F-007 / R-013 / ADR-010.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- `DownloadOrchestrator.ResumeSegmentedAsync` : réconciliation et recouvrement identiques à la
+  reprise connexion unique, puis répartition de la portion restante
+  `[ConfirmedBytes, length)` en segments contigus (offsets absolus) et transfert parallèle ;
+  repli connexion unique si taille inconnue, plages non supportées ou `segmentCount == 1` ;
+  transition `Verifying`.
+- Sécurité : le recouvrement de chevauchement et la réconciliation d'identité bloquent sans
+  mutation (mêmes invariants que la reprise simple).
+- Tests : 6 `DownloadResumeSegmentedTests` (reprise multi-segments depuis un préfixe confirmé,
+  repli sans plages, longueur inconnue, chevauchement bloquant, déjà complet, segmentCount
+  invalide).
+- Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+  53 s ; formatage sans changement ; documentation 16/16.
+- Restent : plages bornées `bytes=start-end`, test d'intégration HTTP réel multi-segments et
+  redistribution dynamique (M-010).

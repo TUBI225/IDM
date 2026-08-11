@@ -469,8 +469,10 @@ longueur et écrit dans le fichier temporaire positionnel sous un verrou unique 
 écritures disque. `ConfirmedBytes` reste le progrès contigu durable (le plus long préfixe `[0, X)`
 entièrement confirmé), conservant la sémantique de reprise existante. À la fin, la longueur confirmée
 doit égaler la taille annoncée avant la transition `Verifying`. Taille inconnue, plages non
-supportées ou `segmentCount == 1` replient sur la connexion unique. La reprise d’un fichier segmenté
-interrompu, les plages bornées `bytes=start-end` (éviter le surplus réseau) et la redistribution
+supportées ou `segmentCount == 1` replient sur la connexion unique. `ResumeSegmentedAsync` applique
+la même réconciliation et le même recouvrement que la reprise connexion unique, puis répartit la
+portion restante `[ConfirmedBytes, length)` en segments contigus (offsets absolus) transférés en
+parallèle. Les plages bornées `bytes=start-end` (éviter le surplus réseau) et la redistribution
 dynamique (M-010) restent à construire.
 
 ## Extension J2 — retry des échecs transitoires (2026-08-11)
