@@ -80,7 +80,7 @@ navigateur ; Q la qualité et la livraison.
 | M-006 | Pause dans la session | Critique | À VÉRIFIER | M-003/4/5 | PR-004 réussi |
 | M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise et trois frontières de finalisation prouvées ; reboot reste |
 | M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, reprise et SHA-256 comparés ; empreinte distante acquise, recouvrement binaire reste |
-| M-009 | SegmentManager statique | Haute | PARTIEL | M-007/8 | Planneur, transfert segmenté parallèle et reprise segmentée testés ; plages bornées restent |
+| M-009 | SegmentManager statique | Haute | PARTIEL | M-007/8 | Planneur, transfert segmenté, reprise segmentée et plages bornées testés ; intégration HTTP multi-segments reste |
 | M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
 | M-011 | Sept niveaux de reprise | Critique | À FAIRE | M-007/8 | chaque branche prouvée ou arrêt sûr |
 | M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |

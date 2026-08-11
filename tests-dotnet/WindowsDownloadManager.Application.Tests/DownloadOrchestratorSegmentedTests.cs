@@ -33,6 +33,26 @@ public sealed class DownloadOrchestratorSegmentedTests
     }
 
     [TestMethod]
+    public async Task RunSegmented_WithBoundedContentSource_UsesBoundedRangesOnly()
+    {
+        var repository = new RecordingRepository();
+        var writer = new ThreadSafeMemoryWriter();
+        var source = new OffsetAwareContentSource(Content);
+        var orchestrator = CreateOrchestrator(Content.Length, source, writer, repository);
+        var task = NewTask();
+
+        var result = await orchestrator.RunSegmentedAsync(
+            task,
+            "C:\\Downloads\\fixture.download",
+            segmentCount: 4,
+            CancellationToken.None);
+
+        Assert.AreEqual(DownloadState.Verifying, result.State);
+        Assert.AreEqual(4, source.BoundedOpenCount);
+        CollectionAssert.AreEqual(Content, writer.Bytes);
+    }
+
+    [TestMethod]
     public async Task RunSegmented_WithoutRangeSupport_FallsBackToSingleConnection()
     {
         var repository = new RecordingRepository();
@@ -184,11 +204,14 @@ public sealed class DownloadOrchestratorSegmentedTests
                 supportsByteRanges));
     }
 
-    private sealed class OffsetAwareContentSource(byte[] bytes, long? failingOffset = null) : IRemoteContentSource
+    private sealed class OffsetAwareContentSource(byte[] bytes, long? failingOffset = null)
+        : IRemoteContentSource, IRemoteBoundedContentSource
     {
         private int _openCount;
+        private int _boundedOpenCount;
 
         public int OpenCount => Volatile.Read(ref _openCount);
+        public int BoundedOpenCount => Volatile.Read(ref _boundedOpenCount);
 
         public ValueTask<RemoteContentLease> OpenReadAsync(
             RemoteResourceInfo resource,
@@ -208,6 +231,28 @@ public sealed class DownloadOrchestratorSegmentedTests
 
             return ValueTask.FromResult<RemoteContentLease>(
                 new(new MemoryStream(bytes, (int)offset, bytes.Length - (int)offset, writable: false), bytes.Length));
+        }
+
+        public ValueTask<RemoteContentLease> OpenBoundedReadAsync(
+            RemoteResourceInfo resource,
+            long start,
+            long end,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _openCount);
+            Interlocked.Increment(ref _boundedOpenCount);
+            if (failingOffset is { } failing && start >= failing)
+            {
+                throw new IOException("Simulated segmented transfer failure.");
+            }
+
+            if (start < 0 || end < start || end >= bytes.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(start));
+            }
+
+            return ValueTask.FromResult<RemoteContentLease>(
+                new(new MemoryStream(bytes, (int)start, (int)(end - start + 1), writable: false), bytes.Length));
         }
     }
 

@@ -501,9 +501,15 @@ public sealed class DownloadOrchestrator
         SemaphoreSlim progressLock,
         CancellationToken cancellationToken)
     {
-        await using var remoteContent = await _contentSource
-            .OpenReadAsync(resource, segment.StartOffset, cancellationToken)
-            .ConfigureAwait(false);
+        await using var remoteContent = _contentSource is IRemoteBoundedContentSource bounded
+            ? await bounded.OpenBoundedReadAsync(
+                resource,
+                segment.StartOffset,
+                segment.EndOffsetExclusive - 1,
+                cancellationToken).ConfigureAwait(false)
+            : await _contentSource
+                .OpenReadAsync(resource, segment.StartOffset, cancellationToken)
+                .ConfigureAwait(false);
 
         var remaining = segment.Length;
         var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);

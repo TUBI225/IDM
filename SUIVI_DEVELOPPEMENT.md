@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 210/210 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 211/211 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3566,7 +3566,7 @@ parallèle et assembler un fichier exact, avec repli sûr sur la connexion uniqu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
 
 ## État final de la tâche
@@ -3607,7 +3607,7 @@ délai) avec backoff exponentiel et gigue, en respectant le `Retry-After` serveu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3641,7 +3641,7 @@ transfert parallèle de la portion restante.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 210/210 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3654,6 +3654,40 @@ dynamique) restent.
 
 Plages bornées `bytes=start-end` pour limiter l'envoi réseau des segments, puis M-014 (file,
 priorités) et M-015 (débit).
+
+---
+
+# Entrée 2026-08-11 — Plages bornées `bytes=start-end` pour les segments (M-009)
+
+## Objectif
+
+Éviter le surplus réseau des plages ouvertes en bornant chaque segment à `bytes=start-end`.
+
+## Travail réalisé
+
+- Port `IRemoteBoundedContentSource` (Application) : `OpenBoundedReadAsync(resource, start, end)`.
+- `HttpRemoteContentSource.OpenBoundedReadAsync` (Network) : requête `Range: bytes=start-end`,
+  validation stricte de la réponse bornée (`Content-Range` exact, longueur exacte), redirections et
+  validateurs identiques aux autres flux.
+- `DownloadOrchestrator.TransferSegmentCoreAsync` : utilise la version bornée quand la source
+  l'implémente, sinon repli sur la plage ouverte (rétrocompatible).
+- Tests : `RunSegmented_WithBoundedContentSource_UsesBoundedRangesOnly` vérifie que les segments
+  n'utilisent que la version bornée ; le stub implémente `IRemoteBoundedContentSource`.
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
+57 s ; formatage sans changement ; contrôle documentaire réussi.
+
+## État final de la tâche
+
+SUCCÈS (partiel) : plages bornées implémentées et testées au niveau unitaire. L'intégration HTTP
+réelle multi-segments et M-010 (redistribution dynamique) restent.
+
+## Prochaine action
+
+M-014 (file, priorités et limites globales) puis M-015 (débit).
+
 
 
 

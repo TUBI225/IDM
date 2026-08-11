@@ -472,8 +472,10 @@ doit égaler la taille annoncée avant la transition `Verifying`. Taille inconnu
 supportées ou `segmentCount == 1` replient sur la connexion unique. `ResumeSegmentedAsync` applique
 la même réconciliation et le même recouvrement que la reprise connexion unique, puis répartit la
 portion restante `[ConfirmedBytes, length)` en segments contigus (offsets absolus) transférés en
-parallèle. Les plages bornées `bytes=start-end` (éviter le surplus réseau) et la redistribution
-dynamique (M-010) restent à construire.
+parallèle. `IRemoteBoundedContentSource` (Application) et `HttpRemoteContentSource.OpenBoundedReadAsync`
+(NETWORK) ouvrent des plages bornées `bytes=start-end` pour chaque segment, évitant le surplus réseau
+des plages ouvertes ; les sources sans plages bornées retombent sur `OpenReadAsync`. La redistribution
+dynamique (M-010) et l'intégration HTTP réelle multi-segments restent à construire.
 
 ## Extension J2 — retry des échecs transitoires (2026-08-11)
 

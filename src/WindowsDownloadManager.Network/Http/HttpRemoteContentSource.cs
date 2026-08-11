@@ -5,7 +5,7 @@ using WindowsDownloadManager.Domain.Downloads;
 
 namespace WindowsDownloadManager.Network.Http;
 
-public sealed class HttpRemoteContentSource : IRemoteContentSource, IRemoteRangeReader
+public sealed class HttpRemoteContentSource : IRemoteContentSource, IRemoteRangeReader, IRemoteBoundedContentSource
 {
     private const int MaximumRedirects = 10;
     private readonly HttpClient _httpClient;
@@ -73,6 +73,79 @@ public sealed class HttpRemoteContentSource : IRemoteContentSource, IRemoteRange
                 .ConfigureAwait(false);
             response = null;
             return new RemoteContentLease(stream, totalLength, acceptedResponse);
+        }
+        finally
+        {
+            response?.Dispose();
+        }
+    }
+
+    public async ValueTask<RemoteContentLease> OpenBoundedReadAsync(
+        RemoteResourceInfo resource,
+        long start,
+        long end,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resource);
+        if (start < 0 || end < start)
+        {
+            throw new ArgumentOutOfRangeException(nameof(start));
+        }
+
+        if (!resource.SupportsByteRanges)
+        {
+            throw new InvalidOperationException("This remote resource does not support bounded byte ranges.");
+        }
+
+        var currentUri = resource.FinalUri;
+        HttpResponseMessage? response = null;
+        try
+        {
+            for (var redirect = 0; redirect <= MaximumRedirects; redirect++)
+            {
+                await _uriSafetyValidator.ValidateAsync(currentUri, cancellationToken).ConfigureAwait(false);
+                using var request = RangeRequestFactory.Create(currentUri, start, end);
+                ApplyValidators(request, resource.EntityTag, resource.LastModified);
+                response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (!IsRedirect(response.StatusCode))
+                {
+                    break;
+                }
+
+                if (redirect == MaximumRedirects || response.Headers.Location is null)
+                {
+                    throw new HttpRequestException("The redirect chain is invalid or too long.");
+                }
+
+                currentUri = response.Headers.Location.IsAbsoluteUri
+                    ? response.Headers.Location
+                    : new Uri(currentUri, response.Headers.Location);
+                response.Dispose();
+                response = null;
+            }
+
+            var acceptedResponse = response
+                ?? throw new HttpRequestException("The remote server returned no response.");
+            ValidateBoundedRangeResponse(
+                acceptedResponse,
+                new RemoteIdentity(
+                    resource.FinalUri,
+                    resource.Length,
+                    resource.EntityTag,
+                    resource.LastModified,
+                    resource.SupportsByteRanges),
+                start,
+                end,
+                checked((int)(end - start + 1)));
+            var stream = await acceptedResponse.Content
+                .ReadAsStreamAsync(cancellationToken)
+                .ConfigureAwait(false);
+            response = null;
+            return new RemoteContentLease(stream, resource.Length, acceptedResponse);
         }
         finally
         {
