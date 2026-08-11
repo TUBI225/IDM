@@ -489,3 +489,12 @@ boucles de transfert (connexion unique et par segment) rejouent les échecs tran
 délai calculé ; sans politique, le comportement historique (propagation immédiate) est conservé. La
 reprise d'un transfert échoué reprend naturellement au progrès confirmé ; un segment rejoué est
 réécrit depuis son début (idempotent).
+
+## Extension J2 — file, priorités et limites globales (2026-08-11)
+
+`DownloadScheduler` (Application) arbitre les tâches à lancer : `Submit` enfile une tâche avec une
+priorité ; `AcquireNext` retourne la tâche la plus prioritaire (priorité décroissante, puis FIFO en
+cas d'égalité) tant que la limite de concurrence globale n'est pas atteinte ; `Release` libère un
+créneau. L'anti-famine par vieillissement augmente progressivement la priorité effective des tâches
+en attente (au-delà d'un intervalle), garantissant qu'une basse priorité finit par passer même en
+présence d'afflux de hautes priorités. L'intégration au futur `DownloadHost` reste à construire.

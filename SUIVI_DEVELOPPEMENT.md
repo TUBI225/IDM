@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 211/211 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 218/218 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3566,7 +3566,7 @@ parallèle et assembler un fichier exact, avec repli sûr sur la connexion uniqu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
 
 ## État final de la tâche
@@ -3607,7 +3607,7 @@ délai) avec backoff exponentiel et gigue, en respectant le `Retry-After` serveu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en 53 s ;
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en 53 s ;
 formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3641,7 +3641,7 @@ transfert parallèle de la portion restante.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
 53 s ; formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3676,7 +3676,7 @@ priorités) et M-015 (débit).
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 211/211 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré en
 57 s ; formatage sans changement ; contrôle documentaire réussi.
 
 ## État final de la tâche
@@ -3687,6 +3687,39 @@ réelle multi-segments et M-010 (redistribution dynamique) restent.
 ## Prochaine action
 
 M-014 (file, priorités et limites globales) puis M-015 (débit).
+
+---
+
+# Entrée 2026-08-11 — Scheduler, priorités et limites globales (M-014)
+
+## Objectif
+
+Arbitrer les tâches à lancer : priorités, équité (anti-famine) et limite de concurrence globale.
+
+## Travail réalisé
+
+- `DownloadScheduler` (Application) : `Submit` enfile `ScheduledDownload(id, priorité, arrivée)` ;
+  `AcquireNext(now)` retourne la tâche la plus prioritaire (priorité décroissante, puis FIFO) tant
+  que la limite de concurrence globale n'est pas atteinte ; `Release(id)` libère un créneau.
+- Anti-famine par vieillissement : au-delà d'un intervalle, la priorité effective d'une tâche en
+  attente augmente (boost par intervalle), garantissant qu'une basse priorité finit par passer.
+- Tests : 7 `DownloadSchedulerTests` (priorité, FIFO, limite globale, libération, file vide,
+  anti-famine, arguments invalides).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 218/218 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (M-014 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : file prioritaire, limite globale et anti-famine testés. L'intégration au futur
+`DownloadHost` et M-015 (débit) restent.
+
+## Prochaine action
+
+M-015 (débit global/tâche/domaine), puis M-010 (redistribution dynamique) et M-011/M-012 (reprise).
+
 
 
 
