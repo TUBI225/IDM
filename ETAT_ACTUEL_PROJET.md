@@ -11,8 +11,8 @@ Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONN
 
 - Nom de travail : IDM Engine / Windows Download Manager.
 - Version produit : 0.1.0 expérimentale.
-- Branche Git : `main`, dépôt local initialisé pendant G0, aucun commit encore créé.
-- Dernier commit : aucun.
+- Branche Git : `main`, dépôt local relié à `https://github.com/TUBI225/IDM.git`.
+- Dernier commit : commit initial de la baseline G2, publié le 2026-08-11.
 - État général : **SOCLE C# PARTIEL, NON UTILISABLE ENCORE COMME GESTIONNAIRE COMPLET**.
 - Porte actuelle : G2 partielle ; reprise réseau depuis un checkpoint sûr et finalisation atomique
   même volume présentes ; hash final et chaos de finalisation restent à construire.

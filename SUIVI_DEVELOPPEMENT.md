@@ -3080,8 +3080,8 @@ sauvegardé`, puis vérifier la réparation après réouverture de SQLite.
 
 ### Commit associé
 
-Aucun commit créé à cette étape : `user.name` et `user.email` ne sont pas configurés. L’index peut
-être préparé, mais l’identité du propriétaire doit être fournie avant le commit initial.
+Commit initial de la baseline G2 créé sur `main` avec l’identité locale `TUBI225
+<EMILONEUFSIX@GMAIL.COM>` et publication vers `https://github.com/TUBI225/IDM.git`.
 
 ### Contrôle documentaire
 
