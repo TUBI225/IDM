@@ -64,7 +64,7 @@ Domain <- Application <- Network
 ```
 
 Présents : états et agrégat minimaux, identité distante, ports initiaux, analyse/transfert HTTP
-streaming avec connexion à l’IP validée, writer durable, orchestrateur neuf, dépôt SQLite v2 et
+streaming avec connexion à l’IP validée, writer durable, orchestrateur neuf, dépôt SQLite v3 et
 diagnostics de récupération local/distant, décision combinée, recouvrement binaire et coordination
 diagnostique en lecture seule. Un banc d’intégration injecte des fautes et tue un subprocess autour
 de la frontière flush/checkpoint sur un puis deux blocs, y compris avant le deuxième appel disque.
@@ -416,5 +416,16 @@ l’écrasement ainsi que les volumes différents.
 
 Trois terminaisons subprocess couvrent désormais l’intention `Finalizing` persistée, le move effectué
 avant `Completed` et le commit `Completed`. Le parent rouvre SQLite, vérifie les deux chemins et
-exécute la réparation lorsque nécessaire. La sérialisation inter-processus, le SHA-256, la copie
-inter-volume et les pannes matérielles restent requis avant de considérer cette chaîne complète.
+exécute la réparation lorsque nécessaire.
+
+## Extension G2 — SHA-256 de finalisation (2026-08-11)
+
+`Sha256TemporaryFileHasher` lit le fichier en streaming via un port Application. Le coordinateur
+calcule l’empreinte après les contrôles de longueur et de collision, compare en temps constant une
+empreinte attendue optionnelle, l’enregistre dans l’agrégat, puis persiste simultanément hash et état
+`Finalizing`. La migration SQLite v3 ajoute `verified_sha256` avec longueur et alphabet bornés.
+
+Lors d’une réparation, le même hash est recalculé sur le temporaire ou la destination avant move ou
+commit `Completed`. Une divergence bloque sans mutation. Cette empreinte garantit la stabilité entre
+vérification et réparation ; sans valeur officielle externe, elle ne prouve pas l’authenticité du
+distant. La sérialisation inter-processus, la copie inter-volume et les pannes matérielles restent.

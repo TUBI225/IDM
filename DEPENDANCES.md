@@ -97,7 +97,7 @@ Les projets Application.Tests et Integration.Tests ajoutés pour l’orchestrate
 uniquement MSTest et les références de projet existantes : aucune nouvelle dépendance runtime ou
 version de paquet n’a été introduite.
 
-La migration SQLite v2 et `RemoteIdentity` utilisent uniquement `Microsoft.Data.Sqlite` et la BCL
+Les migrations SQLite v2/v3, `RemoteIdentity` et SHA-256 utilisent uniquement `Microsoft.Data.Sqlite` et la BCL
 déjà verrouillés. Aucun paquet, aucune version et aucune licence n’ont changé le 2026-08-04.
 
 `RemoteIdentityReconciler` réutilise le port d’analyse et la BCL existants. Aucun paquet, aucune
@@ -122,3 +122,6 @@ nouvelle n’est ajoutée. `System.Diagnostics.Process` appartient à la BCL.
 
 Aucun abonnement payant n’est nécessaire. Toute nouvelle dépendance exige licence, maintenance,
 compatibilité, audit, verrou et justification avant fusion.
+
+`System.Security.Cryptography.SHA256` appartient à la BCL .NET 10. Son utilisation streaming et
+`CryptographicOperations.FixedTimeEquals` n’ajoutent aucun paquet, verrou ou licence.

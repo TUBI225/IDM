@@ -58,6 +58,7 @@ internal static class Program
                 : new AtomicTemporaryFileFinalizer();
             var finalization = new DownloadFinalizationCoordinator(
                 new ReadOnlyTemporaryFileInspector(),
+                new Sha256TemporaryFileHasher(),
                 finalizer,
                 repository);
             await finalization.FinalizeAsync(task, CancellationToken.None);

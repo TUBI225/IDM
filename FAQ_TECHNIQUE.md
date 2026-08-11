@@ -210,5 +210,12 @@ chaque bloc après flush puis passe à `Verifying`. Toute divergence reste bloqu
 
 Partiellement. Le moteur persiste `Finalizing`, renomme sans écraser sur le même volume et persiste
 `Completed`. Trois arrêts subprocess prouvent la réparation après intention, après move et après
-commit final. Le hash final, les copies inter-volumes, le reboot Windows et les pannes matérielles
-restent à prouver.
+commit final. Le SHA-256 est désormais revérifié pendant ces réparations ; les copies inter-volumes,
+le reboot Windows et les pannes matérielles restent à prouver.
+
+### 5.13 Que garantit le SHA-256 final ?
+
+Le moteur calcule le SHA-256 du temporaire avant `Finalizing`, le persiste dans SQLite v3 et le
+recalcule pendant une réparation. Une modification entre vérification, move et reprise est donc
+bloquée. Si une empreinte officielle est fournie, elle est comparée avant mutation. Sans empreinte
+officielle, le hash prouve la stabilité locale, pas l’authenticité du serveur.

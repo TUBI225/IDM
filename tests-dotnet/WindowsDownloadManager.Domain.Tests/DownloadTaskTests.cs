@@ -17,12 +17,14 @@ public sealed class DownloadTaskTests
                      DownloadState.Waiting,
                      DownloadState.Downloading,
                      DownloadState.Verifying,
-                     DownloadState.Finalizing,
-                     DownloadState.Completed,
                  })
         {
             task.TransitionTo(state);
         }
+
+        task.RecordVerifiedSha256(new string('A', 64));
+        task.TransitionTo(DownloadState.Finalizing);
+        task.TransitionTo(DownloadState.Completed);
 
         Assert.AreEqual(DownloadState.Completed, task.State);
     }
@@ -76,6 +78,60 @@ public sealed class DownloadTaskTests
 
         AssertThrowsExactly<InvalidOperationException>(() =>
             task.RecordPreparation("C:\\Downloads\\file.download", identity));
+    }
+
+    [TestMethod]
+    public void Finalizing_WithoutVerifiedSha256_IsRejected()
+    {
+        var task = NewTask();
+        task.TransitionTo(DownloadState.Analyzing);
+        task.TransitionTo(DownloadState.Preparing);
+        task.TransitionTo(DownloadState.Waiting);
+        task.TransitionTo(DownloadState.Downloading);
+        task.TransitionTo(DownloadState.Verifying);
+
+        AssertThrowsExactly<InvalidOperationException>(() =>
+            task.TransitionTo(DownloadState.Finalizing));
+    }
+
+    [TestMethod]
+    public void RecordVerifiedSha256_NormalizesLowercaseHex()
+    {
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "file.bin",
+            DownloadState.Verifying,
+            confirmedBytes: 0);
+
+        task.RecordVerifiedSha256(new string('a', 64));
+
+        Assert.AreEqual(new string('A', 64), task.VerifiedSha256);
+    }
+
+    [TestMethod]
+    public void RecordVerifiedSha256_InvalidValue_IsRejected()
+    {
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "file.bin",
+            DownloadState.Verifying,
+            confirmedBytes: 0);
+
+        AssertThrowsExactly<ArgumentException>(() => task.RecordVerifiedSha256("invalid"));
+    }
+
+    [TestMethod]
+    public void Restore_DownloadingWithVerifiedSha256_IsRejected()
+    {
+        AssertThrowsExactly<InvalidDataException>(() => DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "file.bin",
+            DownloadState.Downloading,
+            confirmedBytes: 0,
+            verifiedSha256: new string('A', 64)));
     }
 
     private static DownloadTask NewTask() =>

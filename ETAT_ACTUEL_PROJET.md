@@ -1,8 +1,8 @@
 # État actuel du projet
 
-Version documentaire : 2.4  
+Version documentaire : 2.5  
 Date de création : 2026-08-03  
-Dernière mise à jour : 2026-08-10  
+Dernière mise à jour : 2026-08-11  
 Statut : TABLEAU DE BORD ACTIF — G2 PARTIELLE  
 Responsable logique : Chef de projet  
 Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONNNUES.md`
@@ -14,8 +14,8 @@ Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONN
 - Branche Git : `main`, dépôt local relié à `https://github.com/TUBI225/IDM.git`.
 - Dernier commit : commit initial de la baseline G2, publié le 2026-08-11.
 - État général : **SOCLE C# PARTIEL, NON UTILISABLE ENCORE COMME GESTIONNAIRE COMPLET**.
-- Porte actuelle : G2 partielle ; reprise réseau depuis un checkpoint sûr et finalisation atomique
-  même volume présentes ; hash final et chaos de finalisation restent à construire.
+- Porte actuelle : G2 partielle ; reprise réseau, SHA-256 persisté et finalisation atomique même
+  volume présents ; empreinte distante officielle et chaos matériel restent à construire.
 
 Le projet contient deux piles distinctes. Le prototype Python est une référence temporaire de
 comportement. Le produit actif cible est le moteur C#/.NET 10. Une preuve Python ne valide pas une
@@ -46,10 +46,10 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  125 tests distincts réussissent après l’ajout des crashs subprocess de finalisation.
+  136 tests distincts réussissent après l’ajout du SHA-256 et de la migration v3.
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
-- Writer positionnel avec flush disque et dépôt SQLite v2 : migrations v1/v2 checksummées, WAL,
+- Writer positionnel avec flush disque et dépôt SQLite v3 : migrations v1/v2/v3 checksummées, WAL,
   `synchronous=FULL`, écrivain sérialisé et URL persistée sans query/fragment.
 - Orchestrateur headless neuf : analyse, création exclusive du temporaire, flux Range, blocs 64 Kio,
   flush avant checkpoint SQLite et arrêt en `VERIFYING` avant toute finalisation.
@@ -57,6 +57,8 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
   ouverture HTTP au checkpoint et confirmation durable bloc par bloc.
 - Finalisation même volume : longueur vérifiée, intention `Finalizing` persistée, move sans
   écrasement, état `Completed`, et réparation si un seul des deux chemins subsiste au redémarrage.
+- SHA-256 calculé en streaming avant `Finalizing`, comparé en temps constant à une valeur attendue
+  optionnelle, persisté avec l’intention puis recalculé avant toute réparation.
 - Test d’intégration réel sur loopback : `hello` écrit durablement, 5 octets restaurés depuis SQLite.
 - Chemin temporaire et `RemoteIdentity` (URL finale expurgée, taille, ETag, Last-Modified, Range)
   enregistrés avant la création du temporaire et restaurés après réouverture.
@@ -85,7 +87,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 ### Limites C# actuelles
 
 - La sérialisation est limitée à l’instance d’orchestrateur/coordinateur ; l’exclusion mutuelle du
-  futur `DownloadHost`, le hash final et les crashs matériels restent absents.
+  futur `DownloadHost`, la découverte d’un hash officiel distant et les crashs matériels restent absents.
 - Aucun projet WinUI, ordonnanceur, segmentation, extension ou installateur.
 - Le rebinding vers loopback est bloqué ; proxy, NAT64/IPv6 adverses, TLS public, limites d’en-têtes
   et corps HTTP malformés restent incomplets.
@@ -104,8 +106,8 @@ sauf correction nécessaire à une fixture de parité approuvée.
 
 ## 5. Risques et anomalies prioritaires
 
-- R-001 : comparaison, blocage et recouvrement borné présents ; hash final et course vers la future
-  reprise restent absents.
+- R-001 : comparaison, recouvrement, reprise et SHA-256 final local présents ; hash officiel distant
+  et courses inter-processus restent absents.
 - R-002/R-011 : ordre flush→checkpoint prouvé par exceptions et sept terminaisons subprocess jusqu’à
   la frontière pré-écriture du second bloc ; erreur pendant écriture, panne électrique et écriture
   partielle restent.
@@ -175,5 +177,5 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-Poursuivre G2 : ajouter la vérification SHA-256 avant finalisation, puis définir la politique de
-collision et le protocole de copie vérifiée entre volumes.
+Poursuivre G2 : définir la politique de collision et le protocole de copie vérifiée entre volumes,
+puis intégrer une empreinte officielle distante lorsqu’elle est disponible.

@@ -9,7 +9,7 @@ namespace WindowsDownloadManager.Persistence.Sqlite;
 
 public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDisposable
 {
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 3;
     private const string InitialMigration = """
         CREATE TABLE downloads (
             id TEXT PRIMARY KEY NOT NULL,
@@ -33,11 +33,18 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
         CREATE UNIQUE INDEX ux_downloads_temporary_path
             ON downloads(temporary_path) WHERE temporary_path IS NOT NULL;
         """;
+    private const string VerifiedSha256Migration = """
+        ALTER TABLE downloads ADD COLUMN verified_sha256 TEXT NULL
+            CHECK (verified_sha256 IS NULL OR
+                   (length(verified_sha256) = 64 AND
+                    verified_sha256 NOT GLOB '*[^0-9A-F]*'));
+        """;
 
     private static readonly (int Version, string Sql)[] Migrations =
     [
         (1, InitialMigration),
         (2, RecoveryMetadataMigration),
+        (3, VerifiedSha256Migration),
     ];
 
     private readonly string _connectionString;
@@ -121,7 +128,8 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT original_url, destination_path, state, confirmed_bytes,
-                   temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges
+                   temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges,
+                   verified_sha256
             FROM downloads
             WHERE id = $id;
             """;
@@ -152,7 +160,8 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
             (DownloadState)stateValue,
             reader.GetInt64(3),
             temporaryPath,
-            remoteIdentity);
+            remoteIdentity,
+            reader.IsDBNull(10) ? null : reader.GetString(10));
     }
 
     public async ValueTask SaveAsync(DownloadTask task, CancellationToken cancellationToken)
@@ -170,9 +179,11 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
             command.CommandText = """
                 INSERT INTO downloads(
                     id, original_url, destination_path, state, confirmed_bytes, created_at, updated_at,
-                    temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges)
+                    temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges,
+                    verified_sha256)
                 VALUES ($id, $originalUrl, $destinationPath, $state, $confirmedBytes, $now, $now,
-                        $temporaryPath, $finalUrl, $totalSize, $etag, $lastModified, $supportsByteRanges)
+                        $temporaryPath, $finalUrl, $totalSize, $etag, $lastModified, $supportsByteRanges,
+                        $verifiedSha256)
                 ON CONFLICT(id) DO UPDATE SET
                     original_url = excluded.original_url,
                     destination_path = excluded.destination_path,
@@ -184,6 +195,7 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
                     etag = excluded.etag,
                     last_modified = excluded.last_modified,
                     supports_byte_ranges = excluded.supports_byte_ranges,
+                    verified_sha256 = excluded.verified_sha256,
                     updated_at = excluded.updated_at;
                 """;
             command.Parameters.AddWithValue("$id", task.Id.ToString("D"));
@@ -210,6 +222,9 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
                 task.RemoteIdentity is { } rangeIdentity
                     ? rangeIdentity.SupportsByteRanges ? 1 : 0
                     : DBNull.Value);
+            command.Parameters.AddWithValue(
+                "$verifiedSha256",
+                (object?)task.VerifiedSha256 ?? DBNull.Value);
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }

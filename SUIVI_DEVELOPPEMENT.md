@@ -1505,6 +1505,102 @@ Aucun commit créé : identité Git non configurée et dépôt toujours sans bas
 
 ---
 
+## 2026-08-11 — M-005/M-008/F-017/ADR-011 — SHA-256 avant finalisation
+
+### Objectif
+
+Calculer le SHA-256 du fichier temporaire avant `Finalizing`, refuser une empreinte attendue
+divergente, persister le hash vérifié et le recalculer pendant toute réparation après crash.
+
+### État avant intervention
+
+La longueur et les trois frontières de crash étaient prouvées, mais aucun hash n’était persisté.
+Une modification de contenu conservant la même longueur entre vérification et réparation pouvait
+donc ne pas être détectée. La baseline canonique était de 125 tests et SQLite v2.
+
+### Travail effectué
+
+- Ajout du port `ITemporaryFileHasher` et de `Sha256TemporaryFileHasher` streaming.
+- Normalisation domaine en 64 caractères hexadécimaux majuscules.
+- Interdiction de `Verifying → Finalizing` sans hash vérifié.
+- Comparaison en temps constant d’une empreinte attendue optionnelle avant mutation.
+- Migration SQLite v3 ajoutant `verified_sha256` avec contrainte de format.
+- Persistance atomique du hash avec l’intention `Finalizing`.
+- Recalcul sur temporaire ou destination avant toute réparation et blocage sur divergence.
+- Migration v1→v3 et v2→v3 testées sans perte de tâche.
+
+### Fichiers créés
+
+- `src/WindowsDownloadManager.Application/Abstractions/ITemporaryFileHasher.cs`
+- `src/WindowsDownloadManager.Storage/Files/Sha256TemporaryFileHasher.cs`
+- `tests-dotnet/WindowsDownloadManager.Storage.Tests/Sha256TemporaryFileHasherTests.cs`
+
+### Fichiers de code modifiés
+
+- `src/WindowsDownloadManager.Domain/Downloads/DownloadTask.cs`
+- `src/WindowsDownloadManager.Application/Downloads/DownloadFinalizationCoordinator.cs`
+- `src/WindowsDownloadManager.Persistence/Sqlite/SqliteDownloadRepository.cs`
+- compositions et tests Domain/Application/Persistence/Integration concernés.
+
+### Décisions et limites
+
+ADR-011 est acceptée et partiellement implémentée pour le hash final. Le hash local garantit que le
+contenu réparé est identique à celui vérifié avant l’intention. Sans empreinte officielle externe,
+il ne constitue pas une preuve d’authenticité du serveur. Aucun paquet n’est ajouté ; SHA-256 et la
+comparaison en temps constant utilisent la BCL .NET 10.
+
+### Tests exécutés et résultats
+
+- Domain ciblé avant dernier invariant : 8/8 réussis ; la vérification solution couvre ensuite 9/9.
+- Application ciblé : 56/56 réussis après ajout du contrôle post-move.
+- Storage ciblé : 19/19 réussis.
+- Persistence ciblé : 9/9 réussis.
+- Integration ciblé : 19/19 réussis en 39,349 s.
+- `eng/verify.ps1` initial : restauration et build Release RÉUSSIS, 0 avertissement/0 erreur ; 135/135 tests
+  RÉUSSIS, 0 échec, 0 ignoré en 1 min 10,899 s. La commande a atteint la limite externe de 120 s
+  pendant le formatage, après les tests.
+- Formatage `dotnet format --verify-no-changes` relancé séparément : RÉUSSI.
+- Contrôle documentaire relancé séparément : RÉUSSI, 16/16 documents, 36/36 exigences et 35 tâches.
+- Benchmark gros fichier, hash officiel distant, disque plein, inter-volume, panne électrique et
+  reboot Windows : NON EXÉCUTÉS ; résultat inconnu.
+
+### Risques et statut réel
+
+R-001/R-011 sont réduits ; R-010 reste ouvert sans mesure du coût SHA-256. La tranche est RÉUSSIE
+pour l’intégrité locale et PARTIELLE pour l’authenticité distante et les pannes matérielles.
+
+### Prochaine action
+
+Définir et tester la politique de collision, puis concevoir le protocole inter-volume avec copie,
+flush, comparaison SHA-256 et move final local.
+
+### Commit associé
+
+Commit `feat: verify SHA-256 before finalization` sur `main`.
+
+### Contrôle documentaire
+
+| Document | État | Action |
+|---|---|---|
+| Cahier_des_charges.md | MIS À JOUR | SHA local, hash officiel et limites |
+| FEUILLE_DE_ROUTE.md | MIS À JOUR | M-005/M-008/F-017/G2 et suite |
+| SUIVI_DEVELOPPEMENT.md | MIS À JOUR | Présente entrée ajoutée |
+| ARCHITECTURE_TECHNIQUE.md | MIS À JOUR | Flux SHA et migration v3 |
+| REGISTRE_DES_RISQUES.md | MIS À JOUR | R-001/R-011/R-010 |
+| PROTOCOLE_TEST_REPRISE.md | MIS À JOUR | Section 22 et preuves 135/135 |
+| ETAT_ACTUEL_PROJET.md | MIS À JOUR | Capacité, limites et prochaine action |
+| DECISIONS_ARCHITECTURE.md | MIS À JOUR | ADR-011 acceptée partiellement |
+| REGLES_DE_CODAGE.md | MIS À JOUR | Format et comparaison du hash |
+| DEPENDANCES.md | MIS À JOUR | BCL cryptographique, aucun paquet |
+| MODELISATION_DONNEES.md | MIS À JOUR | Migration v3 et cycle du hash |
+| SECURITE.md | MIS À JOUR | Format, temps constant et authenticité |
+| PERFORMANCES.md | MIS À JOUR | Tampon et absence de benchmark |
+| ERREURS_CONNNUES.md | MIS À JOUR | LIM-011 et LIM-012 |
+| FAQ_TECHNIQUE.md | MIS À JOUR | Garantie exacte du SHA-256 |
+| INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Processus permanent inchangé |
+
+---
+
 ## 2026-08-11 — M-007/Q-001/ADR-029 — Crashs subprocess de finalisation
 
 ### Objectif
@@ -3186,3 +3282,29 @@ Commit initial de la baseline G2 créé sur `main` avec l’identité locale `TU
 | ERREURS_CONNNUES.md | MIS À JOUR | LIM-011 créée |
 | FAQ_TECHNIQUE.md | MIS À JOUR | Portée réelle expliquée |
 | INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Processus permanent inchangé |
+
+---
+
+## Rectification d’ordre du journal — 2026-08-11 — SHA-256 avant finalisation
+
+L’entrée `2026-08-11 — M-005/M-008/F-017/ADR-011 — SHA-256 avant finalisation` a été ajoutée après
+un tableau documentaire ancien au lieu de la fin physique, en raison d’un contexte Markdown répété.
+Elle n’est ni supprimée ni déplacée afin de préserver l’historique append-only. Son horodatage et ses
+preuves restent autoritaires : build Release 0 avertissement/0 erreur, 136/136 tests réussis après
+le contrôle post-move,
+formatage réussi séparément et contrôle documentaire 16/16 réussi. La prochaine action officielle
+reste la politique de collision puis le protocole inter-volume vérifié par SHA-256.
+
+### Addendum de vérification finale — 2026-08-11
+
+Après ajout du contrôle SHA-256 post-move, la commande canonique `eng/verify.ps1` a été relancée avec
+une limite adaptée : restauration hors ligne RÉUSSIE ; build Release 0 avertissement/0 erreur ;
+136/136 tests réussis, 0 échec, 0 ignoré en 27,022 s ; formatage RÉUSSI ; contrôle documentaire
+RÉUSSI avec 16/16 documents, 36/36 exigences et 35 tâches cohérentes. Cette preuve remplace le
+dépassement de délai comme baseline canonique finale de la tranche.
+
+### Addendum Git — correction de portée `.gitignore`
+
+La revue pré-commit a détecté que `downloads/` ignorait aussi les dossiers source C# `Downloads` sur
+Windows. La règle est corrigée en `/downloads/`. Les fichiers Domain/Application précédemment absents
+de l’index sont inclus avec la tranche SHA-256. BUG-002 est consignée dans `ERREURS_CONNNUES.md`.

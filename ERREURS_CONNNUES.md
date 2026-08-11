@@ -99,7 +99,25 @@ de sécurité bloque la publication jusqu’à décision explicite.
 ## LIM-011 — Finalisation partielle au même volume
 
 - Statut : CONFIRMÉE — 2026-08-10.
-- Effet : le move même volume, la réparation non ambiguë et trois crashs subprocess sont présents,
-  mais le SHA-256, la copie inter-volume et l’exclusion mutuelle du futur hôte manquent.
+- Effet : le move même volume, SHA-256, réparation non ambiguë et trois crashs subprocess sont présents,
+  mais la copie inter-volume et l’exclusion mutuelle du futur hôte manquent.
 - Contournement : ne pas présenter la finalisation comme complète et bloquer volumes/collisions ambigus.
-- Clôture : hash final, protocole inter-volume et pannes matérielles ADR-029 validés.
+- Clôture : protocole inter-volume et pannes matérielles ADR-029 validés.
+
+## LIM-012 — Empreinte officielle distante non acquise automatiquement
+
+- Statut : CONFIRMÉE — 2026-08-11.
+- Effet : le SHA-256 local prouve la stabilité avant/après move et réparation, mais ne garantit pas
+  l’authenticité distante sans valeur attendue issue d’une source de confiance.
+- Contournement : fournir explicitement une empreinte attendue à la finalisation lorsqu’elle existe.
+- Clôture : protocole versionné d’acquisition/validation d’un hash officiel avec tests adverses.
+
+## BUG-002 — Dossiers source `Downloads` ignorés par Git
+
+- Statut : CORRIGÉE — 2026-08-11.
+- Cause : la règle non ancrée `downloads/` correspondait aussi aux dossiers C# `Downloads` sous
+  Windows, dont le système de fichiers est insensible à la casse.
+- Effet : plusieurs fichiers Domain/Application existaient et étaient testés localement mais
+  n’étaient pas présents dans les commits GitHub initiaux.
+- Correction : règle remplacée par `/downloads/`, limitée au dossier de données à la racine ; tous
+  les fichiers source concernés sont ajoutés au présent commit.

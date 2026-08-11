@@ -11,6 +11,7 @@ namespace WindowsDownloadManager.Integration.Tests;
 [TestClass]
 public sealed class DurabilityFaultInjectionIntegrationTests
 {
+    private const string ContentSha256 = "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824";
     private static readonly byte[] Content = "hello"u8.ToArray();
     private static readonly byte[] LargeContent = CreateLargeContent();
     private static readonly byte[] FirstLargeBlockContent = LargeContent[..65_536];
@@ -262,6 +263,7 @@ public sealed class DurabilityFaultInjectionIntegrationTests
         var restored = await RestoreAsync(databasePath, taskId);
         Assert.AreEqual(expectedStateBeforeRepair, restored.State);
         Assert.AreEqual(Content.Length, restored.ConfirmedBytes);
+        Assert.AreEqual(ContentSha256, restored.VerifiedSha256);
         Assert.AreEqual(temporaryExistsBeforeRepair, File.Exists(temporaryPath));
         Assert.AreEqual(destinationExistsBeforeRepair, File.Exists(destinationPath));
         if (temporaryExistsBeforeRepair)
@@ -279,6 +281,7 @@ public sealed class DurabilityFaultInjectionIntegrationTests
             await using var repository = new SqliteDownloadRepository(databasePath);
             var finalization = new DownloadFinalizationCoordinator(
                 new ReadOnlyTemporaryFileInspector(),
+                new Sha256TemporaryFileHasher(),
                 new AtomicTemporaryFileFinalizer(),
                 repository);
             await finalization.RepairAsync(restored, CancellationToken.None);
@@ -287,6 +290,7 @@ public sealed class DurabilityFaultInjectionIntegrationTests
         var completed = await RestoreAsync(databasePath, taskId);
         Assert.AreEqual(DownloadState.Completed, completed.State);
         Assert.AreEqual(Content.Length, completed.ConfirmedBytes);
+        Assert.AreEqual(ContentSha256, completed.VerifiedSha256);
         Assert.IsFalse(File.Exists(temporaryPath));
         CollectionAssert.AreEqual(Content, await File.ReadAllBytesAsync(destinationPath));
     }

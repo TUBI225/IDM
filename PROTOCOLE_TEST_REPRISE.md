@@ -465,3 +465,16 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Test ciblé Integration Release : 19 exécutés, 19 réussis, 0 échec, 0 ignoré en 32,185 s.
 - Limites : SHA-256, disque plein, verrou antivirus, copie inter-volume, panne électrique et reboot
   Windows non exécutés ; résultat inconnu.
+
+## 22. SHA-256 avant finalisation et migration v3 — 2026-08-11
+
+- Identifiants : M-005 / M-008 / F-017 / ADR-011 / ADR-029.
+- Domaine : transition `Verifying → Finalizing` refusée sans hash ; format hexadécimal normalisé.
+- Application : hash attendu identique autorisé ; divergence refusée avant intention/move ; hash
+  modifié pendant réparation refusé sans mutation.
+- Storage : `SHA256("hello")` produit l’empreinte canonique attendue en streaming ; annulation testée.
+- Persistence : aller-retour `Finalizing` conserve le hash ; migration v2→v3 ajoute une valeur nulle
+  sans perdre la tâche ; migration v1→v3 conservée.
+- Intégration : finalisation et trois réparations subprocess restaurent le même hash persistant.
+- Tests ciblés : Domain 9/9, Application 56/56, Storage 19/19, Persistence 9/9, Integration 19/19.
+- Limites : hash officiel distant, benchmark gros fichier, inter-volume et panne matérielle non exécutés.

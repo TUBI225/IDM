@@ -46,7 +46,7 @@ projet accepte explicitement un risque critique résiduel. Revue à chaque jalon
 | R-014 | RAM/CPU excessifs sur gros fichiers | Moy. | Élevé | buffers bornés et métriques | banc 100 Gio Q-003 | Performance | Ouvert |
 | R-015 | Trop de connexions/limitation serveur | Élev. | Moyen | départ modeste, 429, quotas | réduire connexions M-014 | Réseau | Ouvert |
 | R-016 | Cookies/jetons/en-têtes divulgués | Moy. | Critique | DPAPI, liste blanche, redaction | rotation et audit Q-002 | Sécurité | Ouvert |
-| R-017 | SQLite corrompue/migration interrompue | Moy. | Critique | v1/v2 transactionnelles, checksums, WAL/FULL | corruption/crash/rollback M-005 | Persistance | Partiellement réduit |
+| R-017 | SQLite corrompue/migration interrompue | Moy. | Critique | v1/v2/v3 transactionnelles, checksums, WAL/FULL | corruption/crash/rollback M-005 | Persistance | Partiellement réduit |
 | R-018 | Antivirus verrouille/quarantaine | Moy. | Moyen | erreurs explicites, fermeture handles | préserver état, tests W | Windows | Ouvert |
 | R-019 | Installateur/mise à jour incomplète | Moy. | Élevé | signature, transaction, rollback | réparation Q-004 | Livraison | Ouvert |
 | R-020 | Incompatibilité Windows/framework | Moy. | Élevé | matrice OS/architecture | support documenté D-004 | Windows | Ouvert |
@@ -196,3 +196,7 @@ restent ouverts pour concurrence inter-processus, hash final absent, antivirus/v
 inter-volume, panne électrique et reboot Windows. Les trois crashs subprocess de finalisation du
 2026-08-11 réduisent R-011/R-021 : intention seule, move seul et commit final convergent vers un
 fichier exact et `Completed`.
+
+Le SHA-256 streaming persisté réduit R-001/R-011 : une modification du temporaire ou de la destination
+entre vérification et réparation bloque désormais la finalisation. R-010 reste ouvert faute de
+mesure CPU/débit, et R-001 reste partiel tant qu’aucun hash officiel distant n’est automatiquement acquis.

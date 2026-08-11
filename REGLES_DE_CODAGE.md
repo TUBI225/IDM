@@ -164,3 +164,5 @@ l’ajout ou la mise à jour concernée.
 - Un move qualifié d’atomique doit rester sur le même volume ; toute copie inter-volume est un autre protocole.
 - Chaque frontière de finalisation doit être prouvée dans un subprocess : intention persistée, move
   effectué et état final persisté ; le parent rouvre toujours SQLite avant toute réparation.
+- Le SHA-256 canonique est un hexadécimal majuscule de 64 caractères. Toute valeur attendue est
+  comparée en temps constant ; le hash vérifié est persisté avec `Finalizing` et revérifié avant réparation.

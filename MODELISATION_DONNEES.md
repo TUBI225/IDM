@@ -260,3 +260,10 @@ les deux présents ou les deux absents restent bloquants.
 Les terminaisons subprocess du 2026-08-11 observent les trois états attendus sans migration :
 `Finalizing + temporaire seul`, `Finalizing + destination seule`, puis `Completed + destination seule`.
 Les deux premiers convergent vers `Completed` après réparation ; le troisième est déjà terminal.
+
+## Migration v3 — empreinte vérifiée (2026-08-11)
+
+La migration additive v3 ajoute `downloads.verified_sha256 TEXT NULL`, borné à 64 caractères
+hexadécimaux majuscules. Le champ reste nul avant vérification. Il est enregistré dans la même
+transaction que l’état `Finalizing`, puis conservé en `Completed`. Une ligne v2 migre avec une valeur
+nulle ; une ancienne intention sans hash est restaurable mais sa réparation s’arrête prudemment.

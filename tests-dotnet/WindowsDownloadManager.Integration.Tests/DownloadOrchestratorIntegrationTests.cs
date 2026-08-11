@@ -71,6 +71,7 @@ public sealed class DownloadOrchestratorIntegrationTests
 
         var finalization = new DownloadFinalizationCoordinator(
             new ReadOnlyTemporaryFileInspector(),
+            new Sha256TemporaryFileHasher(),
             new AtomicTemporaryFileFinalizer(),
             repository);
         await finalization.FinalizeAsync(task, CancellationToken.None);
@@ -81,6 +82,9 @@ public sealed class DownloadOrchestratorIntegrationTests
         Assert.IsNotNull(completed);
         Assert.AreEqual(DownloadState.Completed, completed.State);
         Assert.AreEqual(5, completed.ConfirmedBytes);
+        Assert.AreEqual(
+            "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824",
+            completed.VerifiedSha256);
     }
 
     [TestMethod]

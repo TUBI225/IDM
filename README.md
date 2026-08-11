@@ -20,7 +20,7 @@ New-Item -ItemType Directory -Force "$env:APPDATA\NuGet" | Out-Null
 
 Le moteur C# sonde `bytes=0-0`, lie chaque nouvelle connexion directe à l’IP filtrée, extrait les
 métadonnées sans charger le corps et valide strictement `206`. Il possède un writer temporaire
-durable, un dépôt SQLite v2 et un orchestrateur headless. Une tâche interrompue compatible peut être
+durable, un dépôt SQLite v3 et un orchestrateur headless. Une tâche interrompue compatible peut être
 réconciliée, contrôlée par recouvrement, reprise depuis son checkpoint confirmé puis finalisée par
 intention persistée et renommage atomique sur le même volume.
 
@@ -54,10 +54,11 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - redirections manuelles, validation URI/DNS préalable et classification 416/429/5xx ;
 - transfert neuf et reprise à connexion unique avec ordre `flush disque → checkpoint SQLite` ;
 - finalisation sans écrasement et réparation de l’état `Finalizing` ;
-- 125 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- SHA-256 streaming persisté avant `Finalizing` et revérifié pendant toute réparation ;
+- 136 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
-Restent notamment à ajouter le SHA-256 final, la copie vérifiée entre volumes, le reboot Windows,
-l’interface, la segmentation et l’installateur.
+Restent notamment à intégrer les empreintes officielles fournies par les serveurs, la copie vérifiée
+entre volumes, le reboot Windows, l’interface, la segmentation et l’installateur.
 
 ## Exécution
 

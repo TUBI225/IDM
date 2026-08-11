@@ -50,7 +50,7 @@ Utilisateurs Windows téléchargeant des fichiers volumineux ou sur des connexio
 - Un serveur qui refuse `Range` ne peut pas être forcé à reprendre réellement.
 - État des implémentations : le prototype Python possède un moteur CLI expérimental à connexion
   unique avec reprise partielle ; le produit C# cible possède le domaine, l’analyse et le transfert
-  HTTP neuf, un writer temporaire durable et un dépôt SQLite v2. Le chemin temporaire et l’identité
+  HTTP neuf, un writer temporaire durable et un dépôt SQLite v3. Le chemin temporaire et l’identité
   distante sont persistés. Une réconciliation de démarrage en lecture seule classe maintenant les
   métadonnées ou temporaires absents et les longueurs plus courtes, égales ou plus longues que le
   checkpoint. Une seconde réconciliation réanalyse le distant par une sonde d’en-têtes, compare URL
@@ -66,8 +66,10 @@ Utilisateurs Windows téléchargeant des fichiers volumineux ou sur des connexio
   Une tâche au checkpoint exact peut maintenant être reprise par plage HTTP après recouvrement ; la
   finalisation persiste `Finalizing`, renomme sans écraser sur le même volume, persiste `Completed`
   et répare prudemment l’état si un seul chemin subsiste. Trois arrêts subprocess prouvent les états
-  après intention, après move et après commit final. Le crash pendant une écriture, le SHA-256 final,
-  le redémarrage Windows, les autres volumes et l’interface restent.
+  après intention, après move et après commit final. Le SHA-256 est calculé en streaming avant
+  `Finalizing`, persisté et revérifié pendant la réparation ; une empreinte attendue optionnelle est
+  comparée avant mutation. Le crash pendant une écriture, le hash officiel distant, le redémarrage
+  Windows, les autres volumes et l’interface restent.
 
 ## Critères de réussite du premier jalon
 

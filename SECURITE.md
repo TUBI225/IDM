@@ -224,3 +224,8 @@ une exigence de sécurité et d’intégrité ouverte.
 
 Les trois frontières de finalisation réutilisent exclusivement les adaptateurs réels Storage/SQLite.
 Elles ne reçoivent aucun secret, refusent l’écrasement et vérifient le contenu après réparation.
+
+Le SHA-256 n’est pas un secret. Son format est borné en domaine et en SQLite. La comparaison d’une
+valeur attendue utilise `CryptographicOperations.FixedTimeEquals`. Le calcul ouvre le fichier en
+lecture partagée seulement et respecte l’annulation. Sans empreinte distante issue d’une source de
+confiance, le hash local garantit la stabilité du fichier mais pas son authenticité.

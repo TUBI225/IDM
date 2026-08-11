@@ -30,7 +30,7 @@ Le principe actuel est que l’intégrité prime sur le débit.
 - Backoff : puissance de deux plafonnée à 60 secondes, avec légère gigue.
 
 Le moteur C# transfère désormais en connexion unique avec blocs de 64 Kio et checkpoint durable à
-chaque bloc. Il ne possède encore ni SHA-256 final ni cadence optimisée. Aucun benchmark C# de débit,
+chaque bloc. Il possède désormais un SHA-256 final streaming, sans cadence optimisée. Aucun benchmark C# de débit,
 mémoire, CPU ou coût SQLite n’a été exécuté.
 
 ## Mesures observées — prototype Python
@@ -160,3 +160,7 @@ n’est revendiqué.
 Les trois scénarios subprocess de finalisation portent la suite à 125 tests fonctionnels. Ils
 mesurent des propriétés de durabilité et non la latence de finalisation ; aucune conclusion de
 performance ne peut être tirée de leur durée.
+
+La tranche SHA-256 porte la suite à 136 tests fonctionnels. Le `FileStream` utilise un tampon de
+128 Kio et une lecture séquentielle, mais aucun profil 1/10/100 Gio, coût CPU, débit disque ou impact
+sur la durée de finalisation n’a été mesuré. R-010 reste ouvert et aucune performance n’est revendiquée.

@@ -15,7 +15,7 @@ Documents liés : `Cahier_des_charges.md`, `ETAT_ACTUEL_PROJET.md`, `PROTOCOLE_T
 4. Jalons et portes de qualité
 5. Prochaine action
 
-Dernière mise à jour : 2026-08-10
+Dernière mise à jour : 2026-08-11
 
 ## Convention de pilotage G0
 
@@ -50,8 +50,8 @@ Dernière mise à jour : 2026-08-10
 
 ## Prochaine action recommandée
 
-Poursuivre G2 : ajouter la vérification SHA-256 avant finalisation et sa preuve de non-corruption,
-puis définir la politique de collision. Ne pas commencer l’UI ni la segmentation avant cette preuve.
+Poursuivre G2 : définir la politique de collision et le protocole inter-volume avec copie, flush,
+SHA-256 et move local. Ne pas commencer l’UI ni la segmentation avant cette preuve.
 
 ## 3. Plan détaillé jusqu’à la version stable
 
@@ -64,7 +64,7 @@ navigateur ; Q la qualité et la livraison.
 | D-001 | Revue humaine des 16 documents | Critique | PARTIEL | T-013 | Audit G0 accepté ; décisions G1 restant à arbitrer |
 | D-005 | Compléter la traçabilité exigence→preuve | Critique | EN COURS | T-015 | 100 % des exigences normatives couvertes |
 | D-006 | Détailler chaque ADR proposé | Haute | PARTIEL | D-003/004 | ADR-025 à 029 complets ; ADR-005 à 020 restent à détailler |
-| D-007 | Détailler chaque table et migration | Haute | PARTIEL | M-005 | Migration v2 et colonnes de reprise décrites ; tables segments/événements restent |
+| D-007 | Détailler chaque table et migration | Haute | PARTIEL | M-005 | Migrations v2/v3 décrites ; tables segments/événements restent |
 | D-008 | Créer les fiches de tests non-reprise | Haute | PARTIEL | Cahier | 42 tests .NET standardisés ; UI, install et performance restent à formaliser |
 | D-002 | Choix du nom et identité propre | Normale | À FAIRE | D-001 | Recherche marque et validation propriétaire |
 | D-003 | Matrice C#/.NET vs prototype | Critique | PARTIEL | D-001 | .NET 10 retenu et compilé ; parité/migration restant à décider |
@@ -75,10 +75,10 @@ navigateur ; Q la qualité et la livraison.
 | M-002 | Machine d’états complète | Critique | PARTIEL | M-001 | Enum/matrice initiales présentes ; transitions exhaustives manquantes |
 | M-003 | Analyse HTTP et redirections | Critique | PARTIEL | M-001 | Connexion liée à l’IP validée ; proxy/TLS public/NAT64 restent à tester |
 | M-004 | Stockage temporaire et préallocation C# | Critique | PARTIEL | M-001 | Création, flush, reprise et move même volume testés ; disque plein/amovible restent |
-| M-005 | Dépôt SQLite et migrations C# | Critique | PARTIEL | M-001/G1 | Migration v1→v2 et métadonnées testées ; interruption/rollback/corruption restent |
+| M-005 | Dépôt SQLite et migrations C# | Critique | PARTIEL | M-001/G1 | Migrations v1→v2→v3 et hash testés ; interruption/rollback/corruption restent |
 | M-006 | Pause dans la session | Critique | À VÉRIFIER | M-003/4/5 | PR-004 réussi |
 | M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise et trois frontières de finalisation prouvées ; reboot reste |
-| M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, recouvrement et reprise comparés ; hash final reste |
+| M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, reprise et SHA-256 local comparés ; hash officiel distant reste |
 | M-009 | SegmentManager statique | Haute | À FAIRE | M-007/8 | couverture exacte sans trou/chevauchement |
 | M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
 | M-011 | Sept niveaux de reprise | Critique | À FAIRE | M-007/8 | chaque branche prouvée ou arrêt sûr |
@@ -105,9 +105,9 @@ navigateur ; Q la qualité et la livraison.
   PARTIEL jusqu’aux arbitrages G1.
 - G1 Décisions et qualité : FRANCHIE le 2026-08-03 ; ADR-025 à 029 décidées, NuGet verrouillé,
   audit sans vulnérabilité détectée et 14 tests .NET standardisés réussis.
-- G2 Moteur direct durable : PARTIEL le 2026-08-10 ; réseau anti-rebind, writer, SQLite v2,
+- G2 Moteur direct durable : PARTIEL le 2026-08-11 ; réseau anti-rebind, writer, SQLite v3,
   téléchargement neuf, reprise réseau, finalisation même volume et réparation `Finalizing` sont
-  testés avec trois crashs de finalisation, mais hash final, écriture partielle et panne matérielle restent.
+  testés avec SHA-256 et trois crashs de finalisation, mais hash officiel, inter-volume et panne matérielle restent.
 - J1 Moteur fiable : M-002 à M-008 sans risque critique d’intégrité non traité.
 - J2 Accélération : segmentation et reprise renforcée prouvées avant toute promesse de vitesse.
 - J3 Produit Windows : UI, navigateur et installateur sans couplage au moteur.
@@ -133,11 +133,11 @@ qu’une preuve Python ne valide pas encore le moteur C#.
 | F-010 | M-007 | ADR-003/009 | R-002/R-011 | Crash avant second appel disque et checkpoints prouvés ; reprise réparatrice/reboot restent | PARTIEL |
 | F-011 | M-011 | ADR-020 | R-001 | Tests des sept branches | À FAIRE |
 | F-012 | M-012 | ADR-020 | R-001 | PR-062 | À FAIRE |
-| F-013 | M-008 | ADR-004/011 | R-001 | Chaîne distante/recouvrement coordonnée ; hash final reste | PARTIEL |
+| F-013 | M-008 | ADR-004/011 | R-001 | Chaîne distante/recouvrement/hash local ; hash officiel reste | PARTIEL |
 | F-014 | M-011 | ADR-020 | R-001 | PR-050 à PR-052 | À FAIRE |
 | F-015 | M-004/M-005 | ADR-003/027 | R-002/R-011 | Avant second appel disque et commits restaurés sans base en avance ; écriture partielle reste | PARTIEL |
 | F-016 | M-007 | ADR-003/009 | R-002/R-017 | Diagnostics coordonnés sans mutation ; réparation/PR-032 restent | PARTIEL |
-| F-017 | M-008/Q-001 | ADR-011 | R-001/R-013 | Taille/hash/carte de plages | PARTIEL |
+| F-017 | M-008/Q-001 | ADR-011 | R-001/R-013 | Taille et SHA-256 local vérifiés ; carte/hash officiel restent | PARTIEL |
 | F-018 | M-004/M-007 | ADR-003 | R-011/R-021 | PR-034/043 | PARTIEL |
 | F-019 | M-004/W-002 | ADR-010 | R-021 | PR-043 | À FAIRE |
 | F-020 | W-002 | À décider | R-021 | Test suppression/historique | À FAIRE |
