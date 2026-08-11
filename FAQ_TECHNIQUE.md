@@ -208,10 +208,18 @@ chaque bloc après flush puis passe à `Verifying`. Toute divergence reste bloqu
 
 ### 5.12 La finalisation est-elle complètement résistante aux crashs ?
 
-Partiellement. Le moteur persiste `Finalizing`, renomme sans écraser sur le même volume et persiste
-`Completed`. Trois arrêts subprocess prouvent la réparation après intention, après move et après
-commit final. Le SHA-256 est désormais revérifié pendant ces réparations ; les copies inter-volumes,
-le reboot Windows et les pannes matérielles restent à prouver.
+Partiellement. Le moteur persiste `Finalizing`, renomme sans écraser sur le même volume ou copie vers
+un transit synchronisé et vérifié sur l’autre volume, puis persiste `Completed`. Trois arrêts
+subprocess prouvent le chemin même volume. Le transit partiel et la coexistence source/destination
+inter-volume sont réparables ; deux volumes physiques, le reboot Windows et les pannes matérielles
+restent à prouver.
+
+### 5.14 Que se passe-t-il si le nom final existe déjà ?
+
+Par défaut, la finalisation s’arrête sans modifier les fichiers. Si l’appelant choisit explicitement
+`KeepBoth`, le moteur cherche `nom (1).ext`, puis les suffixes suivants, et persiste le premier chemin
+libre avant la finalisation. Le move utilise toujours le mode sans écrasement : une collision créée
+concurremment provoque encore un arrêt sûr.
 
 ### 5.13 Que garantit le SHA-256 final ?
 

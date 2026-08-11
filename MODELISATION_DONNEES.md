@@ -267,3 +267,11 @@ La migration additive v3 ajoute `downloads.verified_sha256 TEXT NULL`, borné à
 hexadécimaux majuscules. Le champ reste nul avant vérification. Il est enregistré dans la même
 transaction que l’état `Finalizing`, puis conservé en `Completed`. Une ligne v2 migre avec une valeur
 nulle ; une ancienne intention sans hash est restaurable mais sa réparation s’arrête prudemment.
+
+## Collision et transit inter-volume — 2026-08-11
+
+Aucune migration v4 n’est nécessaire. En mode `KeepBoth`, `destination_path` reçoit le chemin suffixé
+avant la sauvegarde `Finalizing`; l’index unique existant protège aussi deux tâches concurrentes. Le
+transit `.wdm-finalizing-{downloadId}.tmp` est une donnée disque dérivée et éphémère, non persistée :
+l’ID, la destination, le temporaire source, l’état et `verified_sha256` suffisent à le retrouver et à
+réparer. Il est absent après succès. Un transit partiel n’avance aucun champ SQLite.

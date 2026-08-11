@@ -478,3 +478,22 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Intégration : finalisation et trois réparations subprocess restaurent le même hash persistant.
 - Tests ciblés : Domain 9/9, Application 56/56, Storage 19/19, Persistence 9/9, Integration 19/19.
 - Limites : hash officiel distant, benchmark gros fichier, inter-volume et panne matérielle non exécutés.
+
+## 23. Collisions et finalisation inter-volume — 2026-08-11
+
+- Identifiants : M-004 / M-007 / F-018 / F-019 / ADR-029.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release, Microsoft Testing Platform.
+- Collision `Fail` : destination existante, temporaire et destination conservés, aucun intent/move.
+- Collision `KeepBoth` : `file.bin` et `file (1).bin` occupés, `file (2).bin` choisi puis persisté.
+- Inter-volume simulé par `IFileVolumeComparer` : copie de 300 000 octets, flush, hash exact,
+  destination présente et source absente.
+- Reprise : transit partiel remplacé ; source+destination identiques nettoyées ; destination au hash
+  divergent bloque et conserve les deux fichiers ; même volume avec deux fichiers reste ambigu.
+- Intégration : collision réelle sur disque, `KeepBoth`, protocole de copie forcé et round-trip SQLite
+  produisent `Completed`, l’ancien fichier inchangé et le nouveau contenu exact.
+- Tests ciblés : Domain 11/11, Application 58/58, Storage 24/24, Persistence 10/10,
+  Integration 20/20, tous réussis.
+- Vérification canonique finale `eng/verify.ps1` : 147 exécutés, 147 réussis, 0 échec, 0 ignoré en
+  26,864 s ; build 0 avertissement/0 erreur, formatage et documentation réussis.
+- Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
+  reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.

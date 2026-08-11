@@ -128,6 +128,34 @@ public sealed class SqliteDownloadRepositoryTests
     }
 
     [TestMethod]
+    public async Task SaveAndFind_ResolvedCollision_PreservesSelectedDestination()
+    {
+        using var directory = new TemporaryDirectory();
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "C:\\Downloads\\file.bin",
+            DownloadState.Verifying,
+            confirmedBytes: 5,
+            "C:\\Downloads\\file.download",
+            new RemoteIdentity(
+                new Uri("https://example.test/file.bin"),
+                5,
+                "\"v1\"",
+                null,
+                supportsByteRanges: true));
+        task.ResolveDestinationCollision("C:\\Downloads\\file (1).bin");
+        await using var repository = new SqliteDownloadRepository(directory.DatabasePath);
+
+        await repository.SaveAsync(task, CancellationToken.None);
+        var restored = await repository.FindAsync(task.Id, CancellationToken.None);
+
+        Assert.IsNotNull(restored);
+        Assert.AreEqual("C:\\Downloads\\file (1).bin", restored.DestinationPath);
+        Assert.AreEqual(DownloadState.Verifying, restored.State);
+    }
+
+    [TestMethod]
     public async Task Initialize_Version2Database_AddsNullableVerifiedSha256()
     {
         using var directory = new TemporaryDirectory();

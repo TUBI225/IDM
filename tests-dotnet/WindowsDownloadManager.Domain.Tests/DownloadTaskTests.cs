@@ -134,6 +134,36 @@ public sealed class DownloadTaskTests
             verifiedSha256: new string('A', 64)));
     }
 
+    [TestMethod]
+    public void ResolveDestinationCollision_InVerifying_ChangesDestination()
+    {
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "C:\\Downloads\\file.bin",
+            DownloadState.Verifying,
+            confirmedBytes: 0);
+
+        task.ResolveDestinationCollision("C:\\Downloads\\file (1).bin");
+
+        Assert.AreEqual("C:\\Downloads\\file (1).bin", task.DestinationPath);
+    }
+
+    [TestMethod]
+    public void ResolveDestinationCollision_AfterHash_IsRejected()
+    {
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/file.bin"),
+            "C:\\Downloads\\file.bin",
+            DownloadState.Verifying,
+            confirmedBytes: 0);
+        task.RecordVerifiedSha256(new string('A', 64));
+
+        AssertThrowsExactly<InvalidOperationException>(() =>
+            task.ResolveDestinationCollision("C:\\Downloads\\file (1).bin"));
+    }
+
     private static DownloadTask NewTask() =>
         new(Guid.NewGuid(), new Uri("https://example.test/file.bin"), "file.bin");
 

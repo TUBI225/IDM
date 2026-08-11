@@ -229,3 +229,9 @@ Le SHA-256 n’est pas un secret. Son format est borné en domaine et en SQLite.
 valeur attendue utilise `CryptographicOperations.FixedTimeEquals`. Le calcul ouvre le fichier en
 lecture partagée seulement et respecte l’annulation. Sans empreinte distante issue d’une source de
 confiance, le hash local garantit la stabilité du fichier mais pas son authenticité.
+
+La politique de collision échoue par défaut ; `KeepBoth` ne réserve jamais un nom par écrasement et
+le move final conserve `overwrite: false`. La copie inter-volume utilise un transit déterministe lié
+à l’UUID de la tâche, refuse un transit de type reparse point, synchronise et vérifie avant exposition
+du nom final. La source n’est supprimée qu’après vérification du fichier cible. ACL, jonctions créées
+concurremment, deux volumes physiques, antivirus et exclusion inter-processus restent à auditer.

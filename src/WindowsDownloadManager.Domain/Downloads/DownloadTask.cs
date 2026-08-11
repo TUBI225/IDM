@@ -18,7 +18,7 @@ public sealed class DownloadTask
 
     public Guid Id { get; }
     public Uri OriginalUri { get; }
-    public string DestinationPath { get; }
+    public string DestinationPath { get; private set; }
     public DownloadState State { get; private set; } = DownloadState.New;
     public long ConfirmedBytes { get; private set; }
     public string? TemporaryPath { get; private set; }
@@ -122,6 +122,27 @@ public sealed class DownloadTask
         }
 
         VerifiedSha256 = NormalizeSha256(sha256, nameof(sha256));
+    }
+
+    public void ResolveDestinationCollision(string destinationPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        if (State != DownloadState.Verifying)
+        {
+            throw new InvalidOperationException("A destination collision can only be resolved in Verifying state.");
+        }
+
+        if (VerifiedSha256 is not null)
+        {
+            throw new InvalidOperationException("The destination cannot change after SHA-256 verification.");
+        }
+
+        if (string.Equals(DestinationPath, destinationPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The resolved destination must differ from the current destination.", nameof(destinationPath));
+        }
+
+        DestinationPath = destinationPath;
     }
 
     public void ConfirmPersistedBytes(long confirmedBytes)

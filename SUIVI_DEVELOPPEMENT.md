@@ -1980,6 +1980,13 @@ configurée dans l’état observé.
 | ERREURS_CONNNUES.md | MIS À JOUR | LIM-009 ajoutée |
 | FAQ_TECHNIQUE.md | MIS À JOUR | Portée diagnostique expliquée |
 | INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Méthode permanente appliquée sans changement |
+
+### Addendum de vérification canonique finale — 2026-08-11
+
+Après toutes les mises à jour documentaires, `eng/verify.ps1` a de nouveau réussi : restauration
+hors ligne, build Release 0 avertissement/0 erreur, 147/147 tests réussis, 0 échec, 0 ignoré en
+26,864 s, formatage conforme et contrôle documentaire 16/16, 36/36 exigences, 35 tâches cohérentes.
+Cette exécution est la preuve canonique finale de la tranche.
 ---
 
 # 2026-08-04 — 11:09 — M-007/M-008/F-013 — Réconciliation distante en lecture seule
@@ -3308,3 +3315,138 @@ dépassement de délai comme baseline canonique finale de la tranche.
 La revue pré-commit a détecté que `downloads/` ignorait aussi les dossiers source C# `Downloads` sur
 Windows. La règle est corrigée en `/downloads/`. Les fichiers Domain/Application précédemment absents
 de l’index sont inclus avec la tranche SHA-256. BUG-002 est consignée dans `ERREURS_CONNNUES.md`.
+
+---
+
+# 2026-08-11 — M-004/M-007/F-018/F-019/ADR-029 — Collisions et finalisation inter-volume
+
+## Objectif
+
+Définir une politique de collision sans écrasement et implémenter une finalisation réparable entre
+deux volumes par copie durable, SHA-256 et renommage local.
+
+## État avant intervention
+
+Le moteur refusait toute destination existante et savait déplacer atomiquement uniquement sur la
+même racine. Le SHA-256 était persisté et revérifié, mais toute différence de volume provoquait un
+arrêt. Baseline canonique : 136/136 tests réussis.
+
+## Travail effectué
+
+- Ajout de `DestinationCollisionPolicy.Fail` et `KeepBoth`.
+- Sélection bornée du premier `nom (n).ext` absent et mutation du chemin uniquement en `Verifying`,
+  avant le hash et la sauvegarde `Finalizing`.
+- Extension du port de finalisation avec ID, hash attendu et opération de réparation.
+- Détection de volume isolée par `IFileVolumeComparer`.
+- Même volume : hash source puis `File.Move(..., overwrite: false)`.
+- Inter-volume : transit `.wdm-finalizing-{downloadId}.tmp`, copie asynchrone 128 Kio, `FlushAsync`,
+  `Flush(true)`, SHA-256, move local, nouvelle vérification et suppression tardive de la source.
+- Réutilisation d’un transit complet ; remplacement d’un transit partiel propriétaire sans reparse
+  point ; blocage d’une destination divergente.
+- Réparation de source+destination uniquement pour deux volumes et deux hashes conformes ; le même
+  état reste ambigu et bloqué sur un seul volume.
+- Round-trip SQLite du chemin suffixé sans migration supplémentaire.
+
+## Fichiers créés
+
+- `src/WindowsDownloadManager.Application/Downloads/DestinationCollisionPolicy.cs`
+
+## Fichiers modifiés
+
+- Ports, domaine, coordinateur Application et adaptateur Storage de finalisation.
+- Tests Domain, Application, Storage, Persistence, Integration et décorateur CrashTestHost.
+- Documents permanents concernés par capacité, architecture, risques, sécurité, performance et preuves.
+
+## Fichiers supprimés
+
+- Aucun.
+
+## Décisions prises
+
+ADR-029 est étendue sans être remplacée. `Fail` reste la politique par défaut. `KeepBoth` doit être
+demandé explicitement et ne garantit jamais une réservation destructive : le move sans écrasement
+reste l’ultime protection contre une course. Le transit est dérivé de l’UUID et non persisté, car les
+données v3 permettent de le retrouver. Aucun nom final n’est exposé avant hash et move local.
+
+## Problèmes rencontrés
+
+Deux appels `apply_patch` ont rencontré un délai du bac à sable avant écriture ou une vérification de
+contexte documentaire échouée. Ils ont été rejoués en correctifs plus petits ; aucune modification
+partielle n’a été conservée par les appels refusés.
+
+## Solutions appliquées
+
+Les interfaces ont été migrées avec toutes leurs implémentations et doubles de tests. Les scénarios
+inter-volume sont déterministes grâce à un comparateur de volumes injecté, tout en exécutant de vraies
+I/O fichier, de vrais hashes et SQLite. Les limites physiques ne sont pas confondues avec cette preuve.
+
+## Tests exécutés
+
+- Build Release intermédiaire : RÉUSSI, 0 avertissement, 0 erreur.
+- Domain ciblé : 11/11 réussis.
+- Application ciblé : 58/58 réussis.
+- Storage ciblé final : 24/24 réussis.
+- Persistence ciblé : 10/10 réussis.
+- Integration ciblé : 20/20 réussis.
+- Commande canonique `powershell.exe -NoProfile -ExecutionPolicy Bypass -File eng/verify.ps1` :
+  restauration hors ligne RÉUSSIE ; build Release 0 avertissement/0 erreur ; 147 exécutés,
+  147 réussis, 0 échec, 0 ignoré en 26,143 s ; formatage RÉUSSI ; contrôle documentaire RÉUSSI
+  avec 16/16 documents, 36/36 exigences et 35 tâches cohérentes.
+- Audit NuGet connecté : NON EXÉCUTÉ, aucune dépendance modifiée.
+- Deux volumes physiques, crash subprocess pendant copie, disque plein, retrait, antivirus, reparse
+  point concurrent, panne électrique, reboot Windows et performance gros fichier : NON EXÉCUTÉS.
+  Résultat inconnu.
+
+## Résultats
+
+La destination existante est préservée. `KeepBoth` choisit et persiste le premier suffixe libre.
+La copie simulée inter-volume produit le contenu exact et supprime la source seulement après les
+preuves cible. Un transit partiel est récupéré ; une destination divergente conserve les deux fichiers
+et bloque. La suite complète atteint 147/147.
+
+## Risques découverts
+
+Aucun nouveau risque distinct. R-006/R-011/R-012/R-021 sont réduits mais restent ouverts pour le
+matériel réel, les erreurs de capacité, la concurrence inter-processus, les reparse points concurrents,
+l’antivirus et les coupures matérielles. R-010 reste ouvert faute de mesure du coût de copie et hash.
+
+## État final de la tâche
+
+PARTIEL : protocole fonctionnel et tests déterministes réussis ; validation matérielle absente.
+
+## Travail restant
+
+- Exécuter sur deux volumes physiques et supports amovibles.
+- Ajouter des crashs subprocess avant/après flush, hash, move local et suppression source.
+- Tester disque plein, retrait, antivirus, reparse points et gros fichiers.
+- Acquérir et valider une empreinte officielle distante.
+
+## Prochaine action
+
+Intégrer une empreinte officielle distante lorsqu’elle est publiée par une source de confiance, puis
+étendre le banc subprocess au protocole inter-volume sur deux volumes physiques.
+
+## Commit associé
+
+Commit non encore créé au moment de cette entrée ; code et documentation seront publiés ensemble.
+
+## Contrôle documentaire
+
+| Document | État | Action |
+|---|---|---|
+| Cahier_des_charges.md | MIS À JOUR | Collision et protocole inter-volume décrits |
+| FEUILLE_DE_ROUTE.md | MIS À JOUR | M-004/F-018/F-019, G2 et prochaine action actualisés |
+| SUIVI_DEVELOPPEMENT.md | MIS À JOUR | Présente entrée ajoutée en fin |
+| ARCHITECTURE_TECHNIQUE.md | MIS À JOUR | Flux, transit et réparation documentés |
+| REGISTRE_DES_RISQUES.md | MIS À JOUR | Réductions et limites matérielles consignées |
+| PROTOCOLE_TEST_REPRISE.md | MIS À JOUR | Section 23 et preuves 147/147 ajoutées |
+| ETAT_ACTUEL_PROJET.md | MIS À JOUR | Capacité, tests, limites et suite actualisés |
+| DECISIONS_ARCHITECTURE.md | MIS À JOUR | Extension ADR-029 consignée |
+| REGLES_DE_CODAGE.md | MIS À JOUR | Règles collision, transit, hash et reparse point ajoutées |
+| DEPENDANCES.md | VÉRIFIÉ — NON CONCERNÉ | BCL seulement, aucun paquet modifié |
+| MODELISATION_DONNEES.md | MIS À JOUR | Destination v3 et transit dérivé documentés |
+| SECURITE.md | MIS À JOUR | Non-écrasement, suppression tardive et limites ajoutés |
+| PERFORMANCES.md | MIS À JOUR | Coût non mesuré et buffer 128 Kio précisés |
+| ERREURS_CONNNUES.md | MIS À JOUR | LIM-011 révisée sans clôture abusive |
+| FAQ_TECHNIQUE.md | MIS À JOUR | Collision et état de résistance aux crashs expliqués |
+| INSTRUCTIONS_IA.md | VÉRIFIÉ — NON CONCERNÉ | Méthode permanente appliquée sans changement |

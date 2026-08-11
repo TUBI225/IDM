@@ -257,7 +257,7 @@ confirmation et politique de télémétrie (par défaut aucune).
 ## ADR-029 — Finalisation par intention persistée et réparation
 
 - Date : 2026-08-03.
-- Statut : ACCEPTÉE PAR DÉLÉGATION DU PROPRIÉTAIRE ; IMPLÉMENTATION MÊME VOLUME PARTIELLE.
+- Statut : ACCEPTÉE PAR DÉLÉGATION DU PROPRIÉTAIRE ; IMPLÉMENTATION PARTIELLE.
 - Problème : aucun commit atomique unique ne couvre SQLite et le renommage d’un fichier.
 - Options étudiées : renommer puis mettre à jour ; mettre à jour puis renommer ; journal d’intention
   avec réparation ; copie vers une autre partition.
@@ -273,10 +273,19 @@ confirmation et politique de télémétrie (par défaut aucune).
 - Conditions de révision : primitive de plateforme offrant une garantie mesurée supérieure.
 - Mise en œuvre 2026-08-10 : `Finalizing` est persisté avant un move même volume sans écrasement,
   puis `Completed` après succès. La réparation traite les deux états non ambigus (temporaire seul ou
-  destination seule) et bloque si les deux chemins existent ou manquent. Le SHA-256, la copie
-  inter-volume et les pannes matérielles restent nécessaires. Extension du 2026-08-11 : trois
+  destination seule) et bloque si les deux chemins existent ou manquent. Extension du 2026-08-11 : trois
   terminaisons subprocess prouvent la réparation après commit `Finalizing`, après move et après
   commit `Completed`, sans état final ambigu ni perte du contenu.
+
+### Extension ADR-029 — collisions et copie inter-volume (2026-08-11)
+
+La politique par défaut refuse toute collision. `KeepBoth`, demandé explicitement, cherche le premier
+suffixe `nom (n).ext` absent et persiste ce chemin avec `Finalizing`; une course ultérieure reste
+bloquée par le move sans écrasement. Entre racines différentes, Storage copie vers
+`.wdm-finalizing-{downloadId}.tmp` sur le volume cible, synchronise, compare SHA-256, renomme localement,
+revérifie puis supprime la source. La réparation remplace un transit partiel et accepte source plus
+destination uniquement pour le protocole inter-volume si les deux hashes correspondent. Les tests
+simulent deux volumes ; matériel réel, panne électrique et crash subprocess pendant copie restent.
 
 ## Extension ADR-011 — SHA-256 avant finalisation (2026-08-11)
 

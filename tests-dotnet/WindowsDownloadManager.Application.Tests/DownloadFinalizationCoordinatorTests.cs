@@ -49,6 +49,47 @@ public sealed class DownloadFinalizationCoordinatorTests
     }
 
     [TestMethod]
+    public async Task Finalize_KeepBoth_SelectsFirstAvailableNameBeforePersistingIntent()
+    {
+        var events = new List<string>();
+        var task = TaskIn(DownloadState.Verifying);
+        var coordinator = new DownloadFinalizationCoordinator(
+            new CollisionInspector(),
+            new StubHasher(VerifiedSha256),
+            new RecordingFinalizer(events),
+            new RecordingRepository(events));
+
+        await coordinator.FinalizeAsync(
+            task,
+            expectedSha256: null,
+            DestinationCollisionPolicy.KeepBoth,
+            CancellationToken.None);
+
+        Assert.AreEqual("C:\\Downloads\\file (2).bin", task.DestinationPath);
+        Assert.AreEqual(DownloadState.Completed, task.State);
+        CollectionAssert.AreEqual(
+            new[] { "save:Finalizing", "move", "save:Completed" },
+            events);
+    }
+
+    [TestMethod]
+    public async Task Repair_DifferentVolumeBothVerified_DelegatesCleanupAndCompletes()
+    {
+        var events = new List<string>();
+        var task = TaskIn(DownloadState.Finalizing);
+        var coordinator = new DownloadFinalizationCoordinator(
+            new StubInspector(temporaryExists: true, destinationExists: true),
+            new StubHasher(VerifiedSha256),
+            new RecordingFinalizer(events),
+            new RecordingRepository(events));
+
+        await coordinator.RepairAsync(task, CancellationToken.None);
+
+        Assert.AreEqual(DownloadState.Completed, task.State);
+        CollectionAssert.AreEqual(new[] { "repair", "save:Completed" }, events);
+    }
+
+    [TestMethod]
     public async Task Repair_DestinationOnly_CompletesPersistedIntentWithoutMovingAgain()
     {
         var events = new List<string>();
@@ -73,7 +114,7 @@ public sealed class DownloadFinalizationCoordinatorTests
         var coordinator = new DownloadFinalizationCoordinator(
             new StubInspector(temporaryExists: true, destinationExists: true),
             new StubHasher(VerifiedSha256),
-            new RecordingFinalizer(events),
+            new RecordingFinalizer(events, rejectRepair: true),
             new RecordingRepository(events));
 
         await Assert.ThrowsExactlyAsync<InvalidDataException>(async () =>
@@ -171,14 +212,47 @@ public sealed class DownloadFinalizationCoordinatorTests
         }
     }
 
-    private sealed class RecordingFinalizer(List<string> events) : ITemporaryFileFinalizer
+    private sealed class CollisionInspector : ITemporaryFileInspector
     {
-        public ValueTask MoveAtomicallyAsync(
+        public ValueTask<TemporaryFileSnapshot> InspectAsync(
+            string path,
+            CancellationToken cancellationToken)
+        {
+            var exists = path.EndsWith(".download", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith("file.bin", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith("file (1).bin", StringComparison.OrdinalIgnoreCase);
+            return ValueTask.FromResult(exists
+                ? TemporaryFileSnapshot.Existing(5)
+                : TemporaryFileSnapshot.Absent);
+        }
+    }
+
+    private sealed class RecordingFinalizer(List<string> events, bool rejectRepair = false) : ITemporaryFileFinalizer
+    {
+        public ValueTask FinalizeAsync(
+            Guid downloadId,
             string temporaryPath,
             string destinationPath,
+            string verifiedSha256,
             CancellationToken cancellationToken)
         {
             events.Add("move");
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask RepairAsync(
+            Guid downloadId,
+            string temporaryPath,
+            string destinationPath,
+            string verifiedSha256,
+            CancellationToken cancellationToken)
+        {
+            if (rejectRepair)
+            {
+                throw new InvalidDataException("Ambiguous same-volume state.");
+            }
+
+            events.Add("repair");
             return ValueTask.CompletedTask;
         }
     }

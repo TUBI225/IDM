@@ -68,8 +68,10 @@ Utilisateurs Windows téléchargeant des fichiers volumineux ou sur des connexio
   et répare prudemment l’état si un seul chemin subsiste. Trois arrêts subprocess prouvent les états
   après intention, après move et après commit final. Le SHA-256 est calculé en streaming avant
   `Finalizing`, persisté et revérifié pendant la réparation ; une empreinte attendue optionnelle est
-  comparée avant mutation. Le crash pendant une écriture, le hash officiel distant, le redémarrage
-  Windows, les autres volumes et l’interface restent.
+  comparée avant mutation. Les collisions sont refusées par défaut ou résolues explicitement par un
+  suffixe sans écrasement. Une autre racine utilise un transit local au volume cible, copie, flush,
+  SHA-256 puis move local avant suppression de la source. Le crash pendant une écriture, le hash
+  officiel distant, le redémarrage Windows, l’essai sur deux volumes physiques et l’interface restent.
 
 ## Critères de réussite du premier jalon
 

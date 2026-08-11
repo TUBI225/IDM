@@ -125,3 +125,7 @@ compatibilité, audit, verrou et justification avant fusion.
 
 `System.Security.Cryptography.SHA256` appartient à la BCL .NET 10. Son utilisation streaming et
 `CryptographicOperations.FixedTimeEquals` n’ajoutent aucun paquet, verrou ou licence.
+
+La résolution de collision et la copie inter-volume utilisent uniquement `System.IO`, `FileStream`
+et les primitives cryptographiques de la BCL déjà retenue. Aucun paquet, version, verrou, licence ou
+abonnement n’est ajouté par la tranche du 2026-08-11.

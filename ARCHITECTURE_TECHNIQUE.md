@@ -429,3 +429,20 @@ Lors d’une réparation, le même hash est recalculé sur le temporaire ou la d
 commit `Completed`. Une divergence bloque sans mutation. Cette empreinte garantit la stabilité entre
 vérification et réparation ; sans valeur officielle externe, elle ne prouve pas l’authenticité du
 distant. La sérialisation inter-processus, la copie inter-volume et les pannes matérielles restent.
+
+## Extension G2 — collision et finalisation inter-volume (2026-08-11)
+
+`DestinationCollisionPolicy` appartient à Application. `Fail` est la valeur par défaut. `KeepBoth`
+interroge le port d’inspection pour `nom (1).ext` jusqu’au premier chemin absent, puis l’agrégat
+change sa destination uniquement en `Verifying` et avant l’enregistrement du SHA-256. Le chemin
+résolu est persisté dans la même intention `Finalizing`; l’index SQLite et `overwrite: false`
+protègent les courses restantes.
+
+`AtomicTemporaryFileFinalizer` choisit le protocole selon les racines. Sur la même racine, il vérifie
+la source puis utilise `File.Move` sans écrasement. Entre racines, il crée sur le volume cible le
+transit dérivé `.wdm-finalizing-{downloadId}.tmp`, copie avec un buffer de 128 Kio, exécute
+`FlushAsync` puis `Flush(true)`, vérifie le SHA-256, renomme localement, revérifie et supprime la
+source. Un transit existant correspondant est réutilisable ; un transit partiel propriétaire et sans
+reparse point est remplacé. La réparation accepte source+destination uniquement entre volumes et
+seulement si les deux hashes correspondent. Aucune migration v4 n’est requise. Deux volumes physiques,
+crash pendant copie, disque plein et pannes matérielles restent à prouver.

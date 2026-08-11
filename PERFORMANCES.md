@@ -164,3 +164,9 @@ performance ne peut être tirée de leur durée.
 La tranche SHA-256 porte la suite à 136 tests fonctionnels. Le `FileStream` utilise un tampon de
 128 Kio et une lecture séquentielle, mais aucun profil 1/10/100 Gio, coût CPU, débit disque ou impact
 sur la durée de finalisation n’a été mesuré. R-010 reste ouvert et aucune performance n’est revendiquée.
+
+La tranche collision/inter-volume porte la suite à 147 tests fonctionnels. Une finalisation entre
+volumes lit et écrit le contenu complet puis effectue deux contrôles SHA-256 côté Storage, auxquels
+s’ajoute la vérification Application. Le buffer de copie est borné à 128 Kio, mais aucun temps sur
+deux disques, amplification I/O, CPU, mémoire ou gros fichier n’a été mesuré. Cette preuve est
+fonctionnelle et aucune performance n’est revendiquée.

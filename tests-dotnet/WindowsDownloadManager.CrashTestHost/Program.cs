@@ -239,16 +239,26 @@ internal static class Program
 
     private sealed class TerminatingFinalizer(ITemporaryFileFinalizer inner) : ITemporaryFileFinalizer
     {
-        public async ValueTask MoveAtomicallyAsync(
+        public async ValueTask FinalizeAsync(
+            Guid downloadId,
             string temporaryPath,
             string destinationPath,
+            string verifiedSha256,
             CancellationToken cancellationToken)
         {
             await inner
-                .MoveAtomicallyAsync(temporaryPath, destinationPath, cancellationToken)
+                .FinalizeAsync(downloadId, temporaryPath, destinationPath, verifiedSha256, cancellationToken)
                 .ConfigureAwait(false);
             TerminateAbruptly();
         }
+
+        public ValueTask RepairAsync(
+            Guid downloadId,
+            string temporaryPath,
+            string destinationPath,
+            string verifiedSha256,
+            CancellationToken cancellationToken) =>
+            inner.RepairAsync(downloadId, temporaryPath, destinationPath, verifiedSha256, cancellationToken);
     }
 
     private enum CrashBoundary

@@ -15,6 +15,54 @@ namespace WindowsDownloadManager.Integration.Tests;
 public sealed class DownloadOrchestratorIntegrationTests
 {
     [TestMethod]
+    public async Task Finalize_KeepBothAcrossVolumes_PersistsResolvedDestinationAndExactFile()
+    {
+        using var directory = new TemporaryDirectory();
+        var temporaryPath = Path.Combine(directory.Path, "fixture.download");
+        var requestedDestination = Path.Combine(directory.Path, "fixture.bin");
+        var resolvedDestination = Path.Combine(directory.Path, "fixture (1).bin");
+        var databasePath = Path.Combine(directory.Path, "downloads.sqlite3");
+        await File.WriteAllBytesAsync(temporaryPath, "hello"u8.ToArray());
+        await File.WriteAllBytesAsync(requestedDestination, "existing"u8.ToArray());
+        var task = DownloadTask.Restore(
+            Guid.NewGuid(),
+            new Uri("https://example.test/fixture.bin"),
+            requestedDestination,
+            DownloadState.Verifying,
+            confirmedBytes: 5,
+            temporaryPath,
+            new RemoteIdentity(
+                new Uri("https://example.test/fixture.bin"),
+                5,
+                "\"v1\"",
+                null,
+                supportsByteRanges: true));
+        await using var repository = new SqliteDownloadRepository(databasePath);
+        var finalization = new DownloadFinalizationCoordinator(
+            new ReadOnlyTemporaryFileInspector(),
+            new Sha256TemporaryFileHasher(),
+            new AtomicTemporaryFileFinalizer(new DifferentVolumeComparer()),
+            repository);
+
+        await finalization.FinalizeAsync(
+            task,
+            expectedSha256: null,
+            DestinationCollisionPolicy.KeepBoth,
+            CancellationToken.None);
+        var restored = await repository.FindAsync(task.Id, CancellationToken.None);
+
+        Assert.IsFalse(File.Exists(temporaryPath));
+        CollectionAssert.AreEqual("existing"u8.ToArray(), await File.ReadAllBytesAsync(requestedDestination));
+        CollectionAssert.AreEqual("hello"u8.ToArray(), await File.ReadAllBytesAsync(resolvedDestination));
+        Assert.IsNotNull(restored);
+        Assert.AreEqual(DownloadState.Completed, restored.State);
+        Assert.AreEqual(resolvedDestination, restored.DestinationPath);
+        Assert.AreEqual(
+            "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824",
+            restored.VerifiedSha256);
+    }
+
+    [TestMethod]
     public async Task ResumeAndFinalize_RestoredTask_AppendsThenAtomicallyCompletes()
     {
         await using var server = new SequentialLoopbackServer(
@@ -256,6 +304,11 @@ public sealed class DownloadOrchestratorIntegrationTests
         Assert.IsTrue(server.Requests[0].Contains("Range: bytes=0-0", StringComparison.OrdinalIgnoreCase));
         Assert.IsTrue(server.Requests[1].Contains("Range: bytes=0-", StringComparison.OrdinalIgnoreCase));
     }
+}
+
+internal sealed class DifferentVolumeComparer : IFileVolumeComparer
+{
+    public bool AreOnSameVolume(string firstPath, string secondPath) => false;
 }
 
 internal sealed class AllowAllUriSafetyValidator : IUriSafetyValidator

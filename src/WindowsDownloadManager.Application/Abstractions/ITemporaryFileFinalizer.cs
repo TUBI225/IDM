@@ -2,8 +2,17 @@ namespace WindowsDownloadManager.Application.Abstractions;
 
 public interface ITemporaryFileFinalizer
 {
-    ValueTask MoveAtomicallyAsync(
+    ValueTask FinalizeAsync(
+        Guid downloadId,
         string temporaryPath,
         string destinationPath,
+        string verifiedSha256,
+        CancellationToken cancellationToken);
+
+    ValueTask RepairAsync(
+        Guid downloadId,
+        string temporaryPath,
+        string destinationPath,
+        string verifiedSha256,
         CancellationToken cancellationToken);
 }

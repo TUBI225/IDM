@@ -166,3 +166,9 @@ l’ajout ou la mise à jour concernée.
   effectué et état final persisté ; le parent rouvre toujours SQLite avant toute réparation.
 - Le SHA-256 canonique est un hexadécimal majuscule de 64 caractères. Toute valeur attendue est
   comparée en temps constant ; le hash vérifié est persisté avec `Finalizing` et revérifié avant réparation.
+- Une collision échoue par défaut. `KeepBoth` est explicite, borne la recherche à 10 000 candidats et
+  persiste le chemin choisi avant I/O finale ; aucune course ne permet un écrasement.
+- Une finalisation inter-volume copie vers un transit réservé du volume cible, flush disque, vérifie
+  SHA-256, effectue un move local sans écrasement, revérifie puis seulement supprime la source.
+- Un transit partiel peut être remplacé uniquement pour l’ID propriétaire et jamais s’il est un
+  reparse point. Source et destination coexistantes restent ambiguës sur le même volume.

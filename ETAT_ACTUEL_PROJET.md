@@ -1,6 +1,6 @@
 # État actuel du projet
 
-Version documentaire : 2.5  
+Version documentaire : 2.6
 Date de création : 2026-08-03  
 Dernière mise à jour : 2026-08-11  
 Statut : TABLEAU DE BORD ACTIF — G2 PARTIELLE  
@@ -14,8 +14,9 @@ Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONN
 - Branche Git : `main`, dépôt local relié à `https://github.com/TUBI225/IDM.git`.
 - Dernier commit : commit initial de la baseline G2, publié le 2026-08-11.
 - État général : **SOCLE C# PARTIEL, NON UTILISABLE ENCORE COMME GESTIONNAIRE COMPLET**.
-- Porte actuelle : G2 partielle ; reprise réseau, SHA-256 persisté et finalisation atomique même
-  volume présents ; empreinte distante officielle et chaos matériel restent à construire.
+- Porte actuelle : G2 partielle ; reprise réseau, SHA-256 persisté, collisions explicites et
+  finalisation même/inter-volume simulée présents ; empreinte distante officielle et chaos matériel
+  restent à construire.
 
 Le projet contient deux piles distinctes. Le prototype Python est une référence temporaire de
 comportement. Le produit actif cible est le moteur C#/.NET 10. Une preuve Python ne valide pas une
@@ -177,5 +178,19 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-Poursuivre G2 : définir la politique de collision et le protocole de copie vérifiée entre volumes,
-puis intégrer une empreinte officielle distante lorsqu’elle est disponible.
+Poursuivre G2 : intégrer une empreinte officielle distante lorsqu’elle est disponible, puis exécuter
+la copie inter-volume sur deux volumes physiques avec interruption subprocess, disque plein et retrait.
+
+## 9. Preuve collision et inter-volume — 2026-08-11
+
+- `Fail` refuse la destination existante sans sauvegarde ni I/O finale ; `KeepBoth` sélectionne et
+  persiste le premier suffixe disponible.
+- Même volume : move sans écrasement. Autre volume : transit lié à l’UUID sur la cible, copie bornée,
+  flush disque, SHA-256, move local, seconde vérification et suppression tardive de la source.
+- Réparation testée pour transit partiel, source et destination identiques, destination divergente et
+  nom suffixé restauré depuis SQLite.
+- Vérification canonique : restauration hors ligne réussie ; build Release 0 avertissement/0 erreur ;
+  147 exécutés, 147 réussis, 0 échec, 0 ignoré en 26,864 s ; formatage réussi ; documentation 16/16,
+  exigences 36/36 et 35 tâches cohérentes.
+- Deux volumes physiques, crash subprocess pendant la copie, disque plein, retrait, antivirus,
+  reparse point concurrent et performance gros fichier : NON EXÉCUTÉS. Résultat inconnu.

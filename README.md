@@ -22,7 +22,8 @@ Le moteur C# sonde `bytes=0-0`, lie chaque nouvelle connexion directe à l’IP 
 métadonnées sans charger le corps et valide strictement `206`. Il possède un writer temporaire
 durable, un dépôt SQLite v3 et un orchestrateur headless. Une tâche interrompue compatible peut être
 réconciliée, contrôlée par recouvrement, reprise depuis son checkpoint confirmé puis finalisée par
-intention persistée et renommage atomique sur le même volume.
+intention persistée. La finalisation renomme atomiquement sur le même volume ou copie vers un transit
+du volume cible, le synchronise, vérifie son SHA-256 puis effectue un renommage local.
 
 Ce dépôt contient le socle déterministe d’un gestionnaire de téléchargements HTTP/HTTPS fiable.
 Il vise la première preuve du cahier des charges : reprendre après un arrêt de l’application sans
@@ -54,11 +55,13 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - redirections manuelles, validation URI/DNS préalable et classification 416/429/5xx ;
 - transfert neuf et reprise à connexion unique avec ordre `flush disque → checkpoint SQLite` ;
 - finalisation sans écrasement et réparation de l’état `Finalizing` ;
+- collisions explicites : refus par défaut ou conservation sous `nom (n).ext` ;
 - SHA-256 streaming persisté avant `Finalizing` et revérifié pendant toute réparation ;
-- 136 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
+- 147 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
-Restent notamment à intégrer les empreintes officielles fournies par les serveurs, la copie vérifiée
-entre volumes, le reboot Windows, l’interface, la segmentation et l’installateur.
+Restent notamment à intégrer les empreintes officielles fournies par les serveurs, les essais sur
+deux volumes physiques, le reboot Windows, l’interface, la segmentation et l’installateur.
 
 ## Exécution
 

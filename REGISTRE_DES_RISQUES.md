@@ -200,3 +200,11 @@ fichier exact et `Completed`.
 Le SHA-256 streaming persisté réduit R-001/R-011 : une modification du temporaire ou de la destination
 entre vérification et réparation bloque désormais la finalisation. R-010 reste ouvert faute de
 mesure CPU/débit, et R-001 reste partiel tant qu’aucun hash officiel distant n’est automatiquement acquis.
+
+## Réduction de risques — collisions et finalisation inter-volume du 2026-08-11
+
+R-006/R-011/R-012/R-021 sont réduits par le refus d’écrasement, `KeepBoth` explicite, un transit local
+au volume cible, le flush, deux vérifications SHA-256 et la suppression tardive de la source. Les
+tests couvrent transit partiel, destination divergente, source et destination coexistantes et copie
+intégrée avec SQLite. Les risques restent ouverts faute de deux volumes physiques, disque plein,
+reparse point concurrent, retrait de support, antivirus, panne électrique et crash subprocess pendant copie.
