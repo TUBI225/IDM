@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 166/166 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 184/184 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 166/166 tests réussis, 0 échec, 0 ignoré en 37 s ;
+Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en 1 m 10 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3539,4 +3539,45 @@ SUCCÈS (harnais et protocole prêts) ; exécution matérielle réelle en attent
 
 Exécuter `.\eng\run-intervolume-real.ps1 -VolumeA C -VolumeB <lettre>` avec un second volume monté,
 puis compléter le chaos matériel (disque plein, retrait, antivirus, reparse point, panne électrique).
+
+---
+
+# Entrée 2026-08-11 — Segmentation multiple statique (M-009)
+
+## Objectif
+
+Répartir un téléchargement en plages disjointes sans trou ni chevauchement, les transférer en
+parallèle et assembler un fichier exact, avec repli sûr sur la connexion unique.
+
+## Travail réalisé
+
+- `SegmentPlanner` (Domain) : `Plan(totalLength, segmentCount)` produit des segments ordonnés,
+  contigus et couvrant la longueur exacte, sans segment vide ; `Validate` rejette trous,
+  chevauchements, segments vides et couverture incomplète.
+- `DownloadOrchestrator.RunSegmentedAsync` (Application) : analyse, préparation, transitions ; si la
+  ressource annonce une taille et supporte les plages, transfert segmenté parallèle (une connexion
+  par segment via `IRemoteContentSource.OpenReadAsync` à l'offset du segment) ; écritures disque
+  sérialisées par verrou ; `ConfirmedBytes` = progrès contigu confirmé ; vérification finale de
+  longueur ; transition `Verifying`. Repli connexion unique si taille inconnue, plages non
+  supportées ou `segmentCount == 1`.
+- Tests : 11 tests `SegmentPlannerTests` (répartition, cas limites, validation) et 7 tests
+  `DownloadOrchestratorSegmentedTests` (assemblage exact, repli, échec d'un segment conservant le
+  progrès contigu, longueur inconnue).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en
+1 m 10 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : planneur, transfert segmenté parallèle et repli testés. La reprise d'un fichier
+segmenté interrompu, les plages bornées (limiter l'envoi réseau) et la redistribution dynamique
+(M-010) restent à construire.
+
+## Prochaine action
+
+Reprise d'une tâche segmentée interrompue (checkpoints par segments) puis plages bornées
+(`bytes=start-end`) pour éviter le surplus réseau ; ensuite M-010 (redistribution dynamique).
+
 

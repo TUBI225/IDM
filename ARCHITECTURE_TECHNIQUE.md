@@ -453,5 +453,22 @@ transit dérivé `.wdm-finalizing-{downloadId}.tmp`, copie avec un buffer de 128
 `FlushAsync` puis `Flush(true)`, vérifie le SHA-256, renomme localement, revérifie et supprime la
 source. Un transit existant correspondant est réutilisable ; un transit partiel propriétaire et sans
 reparse point est remplacé. La réparation accepte source+destination uniquement entre volumes et
-seulement si les deux hashes correspondent. Aucune migration v4 n’est requise. Deux volumes physiques,
-crash pendant copie, disque plein et pannes matérielles restent à prouver.
+seulement si les deux hashes correspondent. Aucune migration supplémentaire n’est requise pour le
+transit. Deux volumes physiques, crash pendant copie, disque plein et pannes matérielles restent à prouver.
+
+## Extension J2 — segmentation multiple statique (2026-08-11)
+
+`SegmentPlanner` (Domain) répartit `totalLength` en `segmentCount` segments ordonnés, contigus et
+couvrants, sans segment vide (le nombre effectif est borné par la longueur) ; `Validate` garantit
+l’absence de trou, de chevauchement et de couverture incomplète. C’est l’invariant de R-013.
+
+`DownloadOrchestrator.RunSegmentedAsync` analyse la ressource puis, si la taille est annoncée et que
+les plages sont supportées, lance un transfert segmenté : chaque segment ouvre sa propre connexion via
+`IRemoteContentSource.OpenReadAsync` à son offset de départ (plage ouverte), lit exactement sa
+longueur et écrit dans le fichier temporaire positionnel sous un verrou unique qui sérialise les
+écritures disque. `ConfirmedBytes` reste le progrès contigu durable (le plus long préfixe `[0, X)`
+entièrement confirmé), conservant la sémantique de reprise existante. À la fin, la longueur confirmée
+doit égaler la taille annoncée avant la transition `Verifying`. Taille inconnue, plages non
+supportées ou `segmentCount == 1` replient sur la connexion unique. La reprise d’un fichier segmenté
+interrompu, les plages bornées `bytes=start-end` (éviter le surplus réseau) et la redistribution
+dynamique (M-010) restent à construire.

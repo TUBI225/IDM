@@ -498,8 +498,8 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - La tranche empreinte distante du 2026-08-11 porte la suite à 164 tests : build Release 0 erreur,
   164/164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage sans changement ; documentation réussie.
 - Le harnais inter-volume réel du 2026-08-11 (destination explicite au CrashTestHost, script
-  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 166 tests :
-  166/166 réussis, 0 échec, 0 ignoré en 37 s ; formatage sans changement ; documentation réussie.
+  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 184 tests :
+  184/184 réussis, 0 échec, 0 ignoré en 1 m 10 s ; formatage sans changement ; documentation réussie.
 - Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
   reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.
 
@@ -532,3 +532,23 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   (section 23 et scénarios subprocess inter-volume simulés).
 - Compléments non exécutés sur matériel réel : disque plein pendant la copie, retrait du volume en
   cours d'écriture, antivirus/verrou, reparse point concurrent et panne électrique. Résultat inconnu.
+
+## 25. Segmentation multiple statique — M-009 (2026-08-11)
+
+- Identifiants : M-009 / F-007 / R-013 / ADR-010.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- `SegmentPlanner.Plan(totalLength, segmentCount)` : segments ordonnés, contigus, couvrant la
+  longueur exacte, sans segment vide (nombre effectif borné par la longueur).
+- `SegmentPlanner.Validate` : rejette trous, chevauchements, segments vides et couverture incomplète.
+- `DownloadOrchestrator.RunSegmentedAsync` : analyse, préparation ; transfert segmenté parallèle
+  (une connexion par segment, écritures disque sérialisées) avec progrès contigu confirmé ; repli
+  connexion unique si taille inconnue, plages non supportées ou `segmentCount == 1` ; transition
+  `Verifying` après vérification de la longueur totale.
+- Tests Domain : 11/11 `SegmentPlannerTests` (répartition, cas limites, validation).
+- Tests Application : 7/7 `DownloadOrchestratorSegmentedTests` (assemblage exact de 70 000 octets,
+  repli sans plages, un segment, longueur nulle, échec d'un segment conservant le progrès contigu à
+  35 000, longueur inconnue, segmentCount invalide).
+- Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en
+  1 m 10 s ; formatage sans changement ; documentation 16/16.
+- Restent : reprise d'un fichier segmenté interrompu, plages bornées `bytes=start-end`, test
+  d'intégration HTTP réel multi-segments et redistribution dynamique (M-010).

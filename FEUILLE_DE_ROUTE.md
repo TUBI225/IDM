@@ -76,11 +76,11 @@ navigateur ; Q la qualité et la livraison.
 | M-002 | Machine d’états complète | Critique | PARTIEL | M-001 | Enum/matrice initiales présentes ; transitions exhaustives manquantes |
 | M-003 | Analyse HTTP et redirections | Critique | PARTIEL | M-001 | Connexion liée à l’IP validée ; proxy/TLS public/NAT64 restent à tester |
 | M-004 | Stockage temporaire et préallocation C# | Critique | PARTIEL | M-001 | Création, flush, move et copie inter-volume simulée vérifiée ; disque plein/amovible physique restent |
-| M-005 | Dépôt SQLite et migrations C# | Critique | PARTIEL | M-001/G1 | Migrations v1→v2→v3 et hash testés ; interruption/rollback/corruption restent |
+| M-005 | Dépôt SQLite et migrations C# | Critique | PARTIEL | M-001/G1 | Migrations v1→v4 et hash testés ; interruption/rollback/corruption restent |
 | M-006 | Pause dans la session | Critique | À VÉRIFIER | M-003/4/5 | PR-004 réussi |
 | M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise et trois frontières de finalisation prouvées ; reboot reste |
 | M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, reprise et SHA-256 comparés ; empreinte distante acquise, recouvrement binaire reste |
-| M-009 | SegmentManager statique | Haute | À FAIRE | M-007/8 | couverture exacte sans trou/chevauchement |
+| M-009 | SegmentManager statique | Haute | PARTIEL | M-007/8 | Planneur et transfert segmenté parallèle testés ; reprise de segments et plages bornées restent |
 | M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
 | M-011 | Sept niveaux de reprise | Critique | À FAIRE | M-007/8 | chaque branche prouvée ou arrêt sûr |
 | M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |

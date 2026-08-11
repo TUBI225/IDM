@@ -61,10 +61,12 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
   `x-goog-hash`, `x-amz-checksum-sha256`), persistée dans une colonne dédiée et vérifiée à la finalisation
   (mode strict par défaut, forçage explicite possible) ;
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
-- 166 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- segmentation multiple statique : planneur de plages disjointes/couvrantes, transfert segmenté
+  parallèle (une connexion par segment) et repli connexion unique ;
+- 184 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
-deux volumes physiques, le reboot Windows, l’interface, la segmentation et l’installateur.
+deux volumes physiques, le reboot Windows, la reprise segmentée, l’interface et l’installateur.
 
 ## Exécution
 

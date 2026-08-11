@@ -135,6 +135,68 @@ public sealed class DownloadOrchestrator
         return new DownloadRunResult(task.Id, temporaryPath, task.ConfirmedBytes, task.State, resource);
     }
 
+    public async ValueTask<DownloadRunResult> RunSegmentedAsync(
+        DownloadTask task,
+        string temporaryPath,
+        int segmentCount,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentException.ThrowIfNullOrWhiteSpace(temporaryPath);
+        if (segmentCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(segmentCount));
+        }
+
+        if (task.State != DownloadState.New || task.ConfirmedBytes != 0)
+        {
+            throw new InvalidOperationException("Only a new download with no confirmed bytes can use this operation.");
+        }
+
+        if (!Path.IsPathFullyQualified(temporaryPath))
+        {
+            throw new ArgumentException("The temporary path must be absolute.", nameof(temporaryPath));
+        }
+
+        if (string.Equals(temporaryPath, task.DestinationPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The temporary path must differ from the destination path.", nameof(temporaryPath));
+        }
+
+        await SaveAndTransitionAsync(task, DownloadState.Analyzing, cancellationToken).ConfigureAwait(false);
+        var resource = await _resourceAnalyzer.AnalyzeAsync(task.OriginalUri, cancellationToken)
+            .ConfigureAwait(false);
+
+        task.TransitionTo(DownloadState.Preparing);
+        task.RecordPreparation(temporaryPath, ToRemoteIdentity(resource));
+        await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+        await _temporaryFileWriter.PrepareNewAsync(temporaryPath, cancellationToken).ConfigureAwait(false);
+        await SaveAndTransitionAsync(task, DownloadState.Waiting, cancellationToken).ConfigureAwait(false);
+        await SaveAndTransitionAsync(task, DownloadState.Downloading, cancellationToken).ConfigureAwait(false);
+
+        if (resource.Length is null)
+        {
+            // Taille inconnue : repli connexion unique (TransferAsync résout via TotalLength).
+            await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+        }
+        else if (resource.Length != 0)
+        {
+            if (resource.SupportsByteRanges && segmentCount > 1)
+            {
+                var segments = SegmentPlanner.Plan(resource.Length.Value, segmentCount);
+                await SegmentedTransferAsync(task, temporaryPath, resource, segments, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        await SaveAndTransitionAsync(task, DownloadState.Verifying, cancellationToken).ConfigureAwait(false);
+        return new DownloadRunResult(task.Id, temporaryPath, task.ConfirmedBytes, task.State, resource);
+    }
+
     private async ValueTask TransferAsync(
         DownloadTask task,
         string temporaryPath,
@@ -196,6 +258,144 @@ public sealed class DownloadOrchestrator
         {
             throw new EndOfStreamException("The remote resource ended before its announced length.");
         }
+    }
+
+    private async ValueTask SegmentedTransferAsync(
+        DownloadTask task,
+        string temporaryPath,
+        RemoteResourceInfo resource,
+        IReadOnlyList<DownloadSegment> segments,
+        CancellationToken cancellationToken)
+    {
+        var totalLength = resource.Length
+            ?? throw new InvalidDataException("A segmented transfer requires an announced remote length.");
+        var completed = new bool[segments.Count];
+        var progressLock = new SemaphoreSlim(1, 1);
+        var segmentTasks = new Task[segments.Count];
+
+        for (var index = 0; index < segments.Count; index++)
+        {
+            var segment = segments[index];
+            var capturedIndex = index;
+            segmentTasks[index] = Task.Run(
+                () => TransferSegmentAsync(
+                        task,
+                        temporaryPath,
+                        resource,
+                        segments,
+                        segment,
+                        capturedIndex,
+                        completed,
+                        progressLock,
+                        cancellationToken)
+                    .AsTask(),
+                cancellationToken);
+        }
+
+        await Task.WhenAll(segmentTasks).ConfigureAwait(false);
+
+        for (var index = 0; index < completed.Length; index++)
+        {
+            if (!completed[index])
+            {
+                throw new InvalidDataException($"The segment {index} did not complete.");
+            }
+        }
+
+        if (task.ConfirmedBytes != totalLength)
+        {
+            throw new InvalidDataException("The segmented transfer did not confirm the full remote length.");
+        }
+    }
+
+    private async ValueTask TransferSegmentAsync(
+        DownloadTask task,
+        string temporaryPath,
+        RemoteResourceInfo resource,
+        IReadOnlyList<DownloadSegment> segments,
+        DownloadSegment segment,
+        int completedIndex,
+        bool[] completed,
+        SemaphoreSlim progressLock,
+        CancellationToken cancellationToken)
+    {
+        await using var remoteContent = await _contentSource
+            .OpenReadAsync(resource, segment.StartOffset, cancellationToken)
+            .ConfigureAwait(false);
+
+        var remaining = segment.Length;
+        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        try
+        {
+            while (remaining > 0)
+            {
+                var read = await remoteContent.Content.ReadAsync(
+                    buffer.AsMemory(0, (int)Math.Min(BufferSize, remaining)),
+                    cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException("The remote resource ended before the segment completed.");
+                }
+
+                var segmentOffset = segment.EndOffsetExclusive - remaining;
+                var nextBoundary = checked(segmentOffset + read);
+                await progressLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+                long flushedBoundary;
+                try
+                {
+                    flushedBoundary = await _temporaryFileWriter
+                        .WriteAndFlushAsync(temporaryPath, segmentOffset, buffer.AsMemory(0, read), cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                finally
+                {
+                    progressLock.Release();
+                }
+
+                if (flushedBoundary != nextBoundary)
+                {
+                    throw new InvalidDataException("The temporary writer confirmed an unexpected byte boundary.");
+                }
+
+                remaining -= read;
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        await progressLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            completed[completedIndex] = true;
+            var contiguousProgress = ComputeContiguousProgress(completed, segments);
+            if (contiguousProgress > task.ConfirmedBytes)
+            {
+                task.ConfirmPersistedBytes(contiguousProgress);
+                await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            progressLock.Release();
+        }
+    }
+
+    private static long ComputeContiguousProgress(bool[] completed, IReadOnlyList<DownloadSegment> segments)
+    {
+        var progress = 0L;
+        for (var index = 0; index < completed.Length; index++)
+        {
+            if (!completed[index])
+            {
+                break;
+            }
+
+            progress = segments[index].EndOffsetExclusive;
+        }
+
+        return progress;
     }
 
     private async ValueTask SaveAndTransitionAsync(
