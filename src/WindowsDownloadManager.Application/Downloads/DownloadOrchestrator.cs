@@ -1,5 +1,6 @@
 using System.Buffers;
 using WindowsDownloadManager.Application.Abstractions;
+using WindowsDownloadManager.Application.Retries;
 using WindowsDownloadManager.Domain.Downloads;
 
 namespace WindowsDownloadManager.Application.Downloads;
@@ -12,6 +13,7 @@ public sealed class DownloadOrchestrator
     private readonly ITemporaryFileWriter _temporaryFileWriter;
     private readonly IDownloadRepository _downloadRepository;
     private readonly StartupRecoveryCoordinator? _recoveryCoordinator;
+    private readonly IRetryPolicy? _retryPolicy;
     private readonly SemaphoreSlim _mutationLock = new(1, 1);
 
     public DownloadOrchestrator(
@@ -19,13 +21,15 @@ public sealed class DownloadOrchestrator
         IRemoteContentSource contentSource,
         ITemporaryFileWriter temporaryFileWriter,
         IDownloadRepository downloadRepository,
-        StartupRecoveryCoordinator? recoveryCoordinator = null)
+        StartupRecoveryCoordinator? recoveryCoordinator = null,
+        IRetryPolicy? retryPolicy = null)
     {
         _resourceAnalyzer = resourceAnalyzer ?? throw new ArgumentNullException(nameof(resourceAnalyzer));
         _contentSource = contentSource ?? throw new ArgumentNullException(nameof(contentSource));
         _temporaryFileWriter = temporaryFileWriter ?? throw new ArgumentNullException(nameof(temporaryFileWriter));
         _downloadRepository = downloadRepository ?? throw new ArgumentNullException(nameof(downloadRepository));
         _recoveryCoordinator = recoveryCoordinator;
+        _retryPolicy = retryPolicy;
     }
 
     public async ValueTask<DownloadResumeResult> ResumeAsync(
@@ -203,6 +207,38 @@ public sealed class DownloadOrchestrator
         RemoteResourceInfo resource,
         CancellationToken cancellationToken)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await TransferCoreAsync(task, temporaryPath, resource, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+            catch (Exception exception)
+            {
+                if (_retryPolicy is null || cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                var decision = _retryPolicy.Evaluate(attempt, exception);
+                if (!decision.ShouldRetry)
+                {
+                    throw;
+                }
+
+                await Task.Delay(decision.Delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async ValueTask TransferCoreAsync(
+        DownloadTask task,
+        string temporaryPath,
+        RemoteResourceInfo resource,
+        CancellationToken cancellationToken)
+    {
         await using var remoteContent = await _contentSource.OpenReadAsync(
             resource,
             task.ConfirmedBytes,
@@ -319,6 +355,62 @@ public sealed class DownloadOrchestrator
         SemaphoreSlim progressLock,
         CancellationToken cancellationToken)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await TransferSegmentCoreAsync(
+                        task,
+                        temporaryPath,
+                        resource,
+                        segment,
+                        progressLock,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+            }
+            catch (Exception exception)
+            {
+                if (_retryPolicy is null || cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                var decision = _retryPolicy.Evaluate(attempt, exception);
+                if (!decision.ShouldRetry)
+                {
+                    throw;
+                }
+
+                await Task.Delay(decision.Delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        await progressLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            completed[completedIndex] = true;
+            var contiguousProgress = ComputeContiguousProgress(completed, segments);
+            if (contiguousProgress > task.ConfirmedBytes)
+            {
+                task.ConfirmPersistedBytes(contiguousProgress);
+                await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            progressLock.Release();
+        }
+    }
+
+    private async ValueTask TransferSegmentCoreAsync(
+        DownloadTask task,
+        string temporaryPath,
+        RemoteResourceInfo resource,
+        DownloadSegment segment,
+        SemaphoreSlim progressLock,
+        CancellationToken cancellationToken)
+    {
         await using var remoteContent = await _contentSource
             .OpenReadAsync(resource, segment.StartOffset, cancellationToken)
             .ConfigureAwait(false);
@@ -363,22 +455,6 @@ public sealed class DownloadOrchestrator
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
-        }
-
-        await progressLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            completed[completedIndex] = true;
-            var contiguousProgress = ComputeContiguousProgress(completed, segments);
-            if (contiguousProgress > task.ConfirmedBytes)
-            {
-                task.ConfirmPersistedBytes(contiguousProgress);
-                await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            progressLock.Release();
         }
     }
 

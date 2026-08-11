@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using WindowsDownloadManager.Application.Abstractions;
 using WindowsDownloadManager.Application.Downloads;
+using WindowsDownloadManager.Application.Retries;
 using WindowsDownloadManager.Domain.Downloads;
 
 namespace WindowsDownloadManager.Application.Tests;
@@ -104,6 +105,57 @@ public sealed class DownloadOrchestratorTests
         Assert.AreEqual(0, source.OpenCount);
     }
 
+    [TestMethod]
+    public async Task RunNew_WithRetryPolicy_RetriesTransientFailureAndCompletes()
+    {
+        var repository = new RecordingRepository([]);
+        var writer = new RecordingWriter([]);
+        var source = new FlakyContentSource(new byte[] { 1, 2, 3, 4, 5 }, failuresBeforeSuccess: 1);
+        var policy = new ExponentialBackoffRetryPolicy(
+            new StubClassifier(),
+            maxAttempts: 3,
+            baseDelay: TimeSpan.FromMilliseconds(1),
+            maxDelay: TimeSpan.FromMilliseconds(10),
+            random: new Random(42));
+        var orchestrator = new DownloadOrchestrator(
+            new StubAnalyzer(5),
+            source,
+            writer,
+            repository,
+            retryPolicy: policy);
+        var task = NewTask();
+
+        var result = await orchestrator.RunNewAsync(
+            task,
+            "C:\\Downloads\\fixture.download",
+            CancellationToken.None);
+
+        Assert.AreEqual(DownloadState.Verifying, result.State);
+        Assert.AreEqual(5, result.ConfirmedBytes);
+        CollectionAssert.AreEqual(new byte[] { 1, 2, 3, 4, 5 }, writer.Bytes.ToArray());
+        Assert.AreEqual(2, source.OpenCount);
+    }
+
+    [TestMethod]
+    public async Task RunNew_WithoutRetryPolicy_PropagatesTransientFailure()
+    {
+        var repository = new RecordingRepository([]);
+        var writer = new RecordingWriter([]);
+        var source = new FlakyContentSource(new byte[] { 1, 2, 3, 4, 5 }, failuresBeforeSuccess: 1);
+        var orchestrator = new DownloadOrchestrator(
+            new StubAnalyzer(5),
+            source,
+            writer,
+            repository);
+        var task = NewTask();
+
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(async () =>
+            await orchestrator.RunNewAsync(task, "C:\\Downloads\\fixture.download", CancellationToken.None));
+
+        Assert.AreEqual(DownloadState.Downloading, task.State);
+        Assert.AreEqual(1, source.OpenCount);
+    }
+
     private static DownloadOrchestrator CreateOrchestrator(
         byte[] bytes,
         RecordingWriter writer,
@@ -186,5 +238,32 @@ public sealed class DownloadOrchestratorTests
             events.Add($"save:{task.State}:{task.ConfirmedBytes}");
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class FlakyContentSource(byte[] bytes, int failuresBeforeSuccess) : IRemoteContentSource
+    {
+        public int OpenCount { get; private set; }
+
+        public ValueTask<RemoteContentLease> OpenReadAsync(
+            RemoteResourceInfo resource,
+            long offset,
+            CancellationToken cancellationToken)
+        {
+            OpenCount++;
+            if (OpenCount <= failuresBeforeSuccess)
+            {
+                throw new HttpRequestException("Simulated transient failure.");
+            }
+
+            return ValueTask.FromResult<RemoteContentLease>(
+                new(new MemoryStream(bytes, writable: false), bytes.Length));
+        }
+    }
+
+    private sealed class StubClassifier : ITransientFailureClassifier
+    {
+        public bool IsTransient(Exception exception) => true;
+
+        public TimeSpan? GetRetryAfter(Exception exception) => null;
     }
 }

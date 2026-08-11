@@ -47,7 +47,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  184 tests distincts réussissent après l’ajout de la segmentation multiple (M-009).
+  204 tests distincts réussissent après l’ajout du RetryManager et du classifieur d’erreurs (M-013).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
@@ -194,7 +194,7 @@ plein et retrait.
 - Réparation testée pour transit partiel, source et destination identiques, destination divergente et
   nom suffixé restauré depuis SQLite.
 - Vérification canonique : restauration hors ligne réussie ; build Release 0 avertissement/0 erreur ;
-  184 exécutés, 184 réussis, 0 échec, 0 ignoré en 1 m 10 s ; formatage réussi ; documentation 16/16,
+  204 exécutés, 204 réussis, 0 échec, 0 ignoré en 34 s ; formatage réussi ; documentation 16/16,
   exigences 36/36 et 35 tâches cohérentes.
 - Deux volumes physiques, crash subprocess pendant la copie, disque plein, retrait, antivirus,
   reparse point concurrent et performance gros fichier : NON EXÉCUTÉS. Résultat inconnu.

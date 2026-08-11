@@ -84,7 +84,7 @@ navigateur ; Q la qualité et la livraison.
 | M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
 | M-011 | Sept niveaux de reprise | Critique | À FAIRE | M-007/8 | chaque branche prouvée ou arrêt sûr |
 | M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |
-| M-013 | RetryManager et Retry-After | Haute | PARTIEL | M-003 | 429/500/502/503/504 et gigue testés |
+| M-013 | RetryManager et Retry-After | Haute | PARTIEL | M-003 | Classifieur 429/5xx, backoff exponentiel, gigue et Retry-After testés ; intégration hôte reste |
 | M-014 | Scheduler et priorités | Normale | À FAIRE | M-009 | équité, famine et limites globales testées |
 | M-015 | BandwidthController | Normale | À FAIRE | M-014 | débit global/tâche/domaine mesuré |
 | W-001 | Shell UI séparé | Haute | À FAIRE | D-004/M-001 | aucune dépendance UI→stockage |

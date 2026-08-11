@@ -186,14 +186,16 @@ public sealed class DownloadOrchestratorSegmentedTests
 
     private sealed class OffsetAwareContentSource(byte[] bytes, long? failingOffset = null) : IRemoteContentSource
     {
-        public int OpenCount { get; private set; }
+        private int _openCount;
+
+        public int OpenCount => Volatile.Read(ref _openCount);
 
         public ValueTask<RemoteContentLease> OpenReadAsync(
             RemoteResourceInfo resource,
             long offset,
             CancellationToken cancellationToken)
         {
-            OpenCount++;
+            Interlocked.Increment(ref _openCount);
             if (failingOffset is { } failing && offset >= failing)
             {
                 throw new IOException("Simulated segmented transfer failure.");

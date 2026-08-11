@@ -472,3 +472,16 @@ doit égaler la taille annoncée avant la transition `Verifying`. Taille inconnu
 supportées ou `segmentCount == 1` replient sur la connexion unique. La reprise d’un fichier segmenté
 interrompu, les plages bornées `bytes=start-end` (éviter le surplus réseau) et la redistribution
 dynamique (M-010) restent à construire.
+
+## Extension J2 — retry des échecs transitoires (2026-08-11)
+
+Le port `ITransientFailureClassifier` (Application) sépare la connaissance des échecs HTTP des
+politiques de retry : `HttpTransientFailureClassifier` (Network) classifie 429/5xx (via
+`RemoteHttpException.IsTransient`), `HttpRequestException`, `IOException` et `TimeoutException` comme
+transitoires et expose le `Retry-After` serveur. `ExponentialBackoffRetryPolicy` (Application) borne
+le nombre de tentatives, applique un backoff exponentiel avec gigue 50-100 % et une borne maximale,
+et plafonne le `Retry-After`. Le `DownloadOrchestrator` accepte une politique optionnelle : les
+boucles de transfert (connexion unique et par segment) rejouent les échecs transitoires après le
+délai calculé ; sans politique, le comportement historique (propagation immédiate) est conservé. La
+reprise d'un transfert échoué reprend naturellement au progrès confirmé ; un segment rejoué est
+réécrit depuis son début (idempotent).

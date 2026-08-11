@@ -498,8 +498,8 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - La tranche empreinte distante du 2026-08-11 porte la suite à 164 tests : build Release 0 erreur,
   164/164 réussis, 0 échec, 0 ignoré en 1 m 09 s ; formatage sans changement ; documentation réussie.
 - Le harnais inter-volume réel du 2026-08-11 (destination explicite au CrashTestHost, script
-  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 184 tests :
-  184/184 réussis, 0 échec, 0 ignoré en 1 m 10 s ; formatage sans changement ; documentation réussie.
+  `eng/run-intervolume-real.ps1`) ajoute deux scénarios subprocess et porte la suite à 204 tests :
+  204/204 réussis, 0 échec, 0 ignoré en 34 s ; formatage sans changement ; documentation réussie.
 - Deux volumes physiques, crash subprocess au milieu de copie, disque plein, retrait, antivirus,
   reparse point concurrent et panne électrique : NON EXÉCUTÉS. Résultat inconnu.
 
@@ -548,7 +548,25 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Tests Application : 7/7 `DownloadOrchestratorSegmentedTests` (assemblage exact de 70 000 octets,
   repli sans plages, un segment, longueur nulle, échec d'un segment conservant le progrès contigu à
   35 000, longueur inconnue, segmentCount invalide).
-- Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en
+- Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
   1 m 10 s ; formatage sans changement ; documentation 16/16.
 - Restent : reprise d'un fichier segmenté interrompu, plages bornées `bytes=start-end`, test
   d'intégration HTTP réel multi-segments et redistribution dynamique (M-010).
+
+## 26. Retry des échecs transitoires — M-013 (2026-08-11)
+
+- Identifiants : M-013 / F-008 / ADR-014.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- `HttpTransientFailureClassifier` : 429/500/502/503/504 transitoires (via
+  `RemoteHttpException.IsTransient`), `HttpRequestException`/`IOException`/`TimeoutException`
+  transitoires, autres échecs permanents ; `Retry-After` exposé quand présent.
+- `ExponentialBackoffRetryPolicy` : tentatives bornées, backoff exponentiel, gigue 50-100 %, délai
+  maximal, `Retry-After` serveur plafonné par la borne.
+- Orchestrateur : politique optionnelle appliquée aux transferts connexion unique et segmentés ;
+  sans politique, propagation immédiate conservée ; reprise au progrès confirmé.
+- Tests : 7 `ExponentialBackoffRetryPolicyTests` ; 8 `HttpTransientFailureClassifierTests` ; 3 tests
+  d'orchestrateur (retry d'un échec transitoire avec succès ensuite, propagation sans politique).
+- Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
+  34 s ; formatage sans changement ; documentation 16/16.
+- Restent : ordonnancement global des retries multi-tâches (future file) et limites de connexions
+  M-014.

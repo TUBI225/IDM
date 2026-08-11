@@ -3478,7 +3478,7 @@ le forçage (`allowForcedBypass: true`) reste possible explicitement.
 ## État final de la tâche
 
 SUCCÈS : protocole d'acquisition, de persistance et de validation de l'empreinte distante SHA-256
-implémenté et validé. Vérification canonique : build Release 0 erreur, 184/184 tests réussis, format
+implémenté et validé. Vérification canonique : build Release 0 erreur, 204/204 tests réussis, format
 sans changement, contrôle documentaire réussi. LIM-012 résolue.
 
 ## Prochaine action
@@ -3527,7 +3527,7 @@ critères de validation.
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en 1 m 10 s ;
+Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en 34 s ;
 formatage sans changement ; contrôle documentaire réussi. L'exécution sur deux volumes physiques
 réels reste NON EXÉCUTÉE (un seul volume monté sur la machine).
 
@@ -3566,7 +3566,7 @@ parallèle et assembler un fichier exact, avec repli sûr sur la connexion uniqu
 
 ## Résultats
 
-Vérification canonique : build Release 0 erreur ; 184/184 tests réussis, 0 échec, 0 ignoré en
+Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en
 1 m 10 s ; formatage sans changement ; contrôle documentaire réussi (M-009 -> PARTIEL).
 
 ## État final de la tâche
@@ -3579,5 +3579,46 @@ segmenté interrompu, les plages bornées (limiter l'envoi réseau) et la redist
 
 Reprise d'une tâche segmentée interrompue (checkpoints par segments) puis plages bornées
 (`bytes=start-end`) pour éviter le surplus réseau ; ensuite M-010 (redistribution dynamique).
+
+---
+
+# Entrée 2026-08-11 — RetryManager, classifieur d'erreurs et Retry-After (M-013)
+
+## Objectif
+
+Réessayer proprement les échecs transitoires d'un transfert (429/5xx, connexion interrompue,
+délai) avec backoff exponentiel et gigue, en respectant le `Retry-After` serveur, sans réessayer les
+échecs permanents.
+
+## Travail réalisé
+
+- Port `ITransientFailureClassifier` (Application) : `IsTransient` et `GetRetryAfter` sur une
+  exception.
+- `HttpTransientFailureClassifier` (Network) : 429/5xx transitoires via `RemoteHttpException.IsTransient`,
+  `HttpRequestException`/`IOException`/`TimeoutException` transitoires, `Retry-After` extrait.
+- `ExponentialBackoffRetryPolicy` (Application) : `Evaluate(attempt, exception)` borne le nombre de
+  tentatives, applique un backoff exponentiel avec gigue 50-100 % et une borne maximale, et
+  privilégie le `Retry-After` serveur (plafonné).
+- `DownloadOrchestrator` : politique optionnelle (`IRetryPolicy?`) ; les boucles de transfert
+  connexion unique et par segment rejouent les échecs transitoires en respectant le délai calculé.
+  Comportement par défaut inchangé (pas de retry si aucune politique fournie).
+- Tests : 7 `ExponentialBackoffRetryPolicyTests`, 8 `HttpTransientFailureClassifierTests`, 3 tests
+  d'orchestrateur (retry d'un échec transitoire puis succès, propagation sans politique).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 204/204 tests réussis, 0 échec, 0 ignoré en 34 s ;
+formatage sans changement ; contrôle documentaire réussi.
+
+## État final de la tâche
+
+SUCCÈS (partiel) : classification, politique de retry, Retry-After et intégration orchestrateur
+testés. L'ordonnancement global des retries multi-tâches (future file de téléchargement) reste.
+
+## Prochaine action
+
+Reprise segmentée interrompue (M-009), puis M-014 (file, priorités et limites globales) et M-015
+(débit).
+
 
 
