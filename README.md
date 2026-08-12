@@ -59,7 +59,7 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - SHA-256 streaming persisté avant `Finalizing` et revérifié pendant toute réparation ;
 - empreinte distante SHA-256 extraite des en-têtes HTTP (`Content-Digest`, `Digest`, `x-checksum-sha256`,
   `x-goog-hash`, `x-amz-checksum-sha256`), persistée dans une colonne dédiée et vérifiée à la finalisation
-  (mode strict par défaut, forçage explicite possible) ;
+  (validation stricte uniquement, sans forçage) ;
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
 - segmentation multiple statique : planneur de plages disjointes/couvrantes, transfert segmenté
   parallèle (une connexion par segment) et repli connexion unique ;

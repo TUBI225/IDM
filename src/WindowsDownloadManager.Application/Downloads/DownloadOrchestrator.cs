@@ -667,11 +667,19 @@ public sealed class DownloadOrchestrator
                 cancellationToken).ConfigureAwait(false);
             queue.MarkCompleted(chunk.Value);
 
-            var progress = queue.ComputeContiguousProgress();
-            if (progress > task.ConfirmedBytes)
+            await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                task.ConfirmPersistedBytes(progress);
-                await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+                var progress = queue.ComputeContiguousProgress();
+                if (progress > task.ConfirmedBytes)
+                {
+                    task.ConfirmPersistedBytes(progress);
+                    await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                writeLock.Release();
             }
         }
     }

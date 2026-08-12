@@ -220,6 +220,13 @@ public sealed class DownloadHost : IAsyncDisposable
 
     private async ValueTask RunResumeAsync(DownloadTask task, CancellationToken cancellationToken)
     {
+        if (task.RemoteIdentity is null)
+        {
+            // Métadonnées absentes : aucune reprise native ni retransmission bornée possible.
+            // Arrêt sûr sans mutation : la tâche reste non terminale pour une décision manuelle.
+            return;
+        }
+
         var resource = BuildResumeResource(task);
         var orchestrator = CreateOrchestrator(task, resource);
         var result = await orchestrator
@@ -238,10 +245,11 @@ public sealed class DownloadHost : IAsyncDisposable
                 await RunRetransmissionAsync(task, cancellationToken).ConfigureAwait(false);
                 break;
             default:
-                await SaveAndTransitionAsync(
-                    task,
-                    decision.TargetState ?? DownloadState.PermanentFailure,
-                    cancellationToken).ConfigureAwait(false);
+                if (decision.TargetState is { } targetState)
+                {
+                    await SaveAndTransitionAsync(task, targetState, cancellationToken)
+                        .ConfigureAwait(false);
+                }
                 break;
         }
     }
@@ -256,10 +264,8 @@ public sealed class DownloadHost : IAsyncDisposable
         var cost = _retransmission.EstimateCost(identity.Length, task.ConfirmedBytes);
         if (cost.RequiresConsent && !_options.AllowRetransmissionWithoutConsent)
         {
-            await SaveAndTransitionAsync(
-                task,
-                DownloadState.PermanentFailure,
-                cancellationToken).ConfigureAwait(false);
+            // Retransmission coûteuse non consentie : arrêt sûr sans mutation ;
+            // la tâche reste non terminale pour une décision manuelle.
             return;
         }
 

@@ -3934,6 +3934,57 @@ les preuves de bout en bout sur serveur réel (PR-060/061/062).
 
 Preuves de bout en bout de la reprise/retransmission sur serveur réel (PR-060/061/062) ou l'instance
 unique/IPC ADR-025 avant l'UI Windows.
+---
+
+# Entrée 2026-08-12 — Corrections d'audit post-DownloadHost
+
+## Objectif
+
+Corriger les défauts bloquants retenus par l'audit après l'assemblage du `DownloadHost` : segmentation
+multi-connexions sans identité stable, transitions illégales dans la reprise, contournement du SHA-256
+de finalisation, et course du checkpoint de progression.
+
+## Travail réalisé
+
+- `DownloadStrategy` : la segmentation (`Dynamic`/`Segmented`) exige désormais une identité distante
+  forte (ETag fort, `Last-Modified` ou SHA-256 distant) ; sans preuve de stabilité, repli `Single` pour
+  ne jamais mélanger deux versions d'une ressource.
+- `DownloadFinalizationCoordinator` : `allowForcedBypass` supprimé — la validation SHA-256 est toujours
+  stricte (divergence bloquante sans mutation) ; surcharges réduites à `FinalizeAsync(task, token)` et
+  `FinalizeAsync(task, expectedSha256, policy, token)`.
+- `DownloadHost.RunResumeAsync` : plus d'exception prématurée quand les métadonnées sont absentes
+  (arrêt sûr sans mutation) ; plus de repli vers `PermanentFailure` quand la décision n'a pas d'état
+  cible (`Recovery`/`NativeRange` conservent la tâche non terminale) ; consentement de retransmission
+  refusé → arrêt sûr au lieu de `PermanentFailure`. Toute transition appliquée passe par le chemin
+  légal `Reconnecting → TestingResume` de `SaveAndTransitionAsync`.
+- `DownloadOrchestrator.TransferChunksAsync` : calcul/mutation/sauvegarde du checkpoint sérialisés sous
+  `writeLock`.
+- `Program.cs` : instance unique par utilisateur via un mutex nommé `Local\IDM-DownloadManager-<user>`
+  (code de sortie 3 si une autre instance tourne).
+- Tests : 9 `DownloadStrategyTests` (+2 identité faible), 21 `DownloadHostTests` ; les tests du forçage
+  de finalisation sont supprimés au profit du rejet strict.
+- Docs : nombre de projets MSTest corrigé (sept), mentions du forçage SHA-256 retirées de
+  `ARCHITECTURE_TECHNIQUE.md` et `README.md`.
+
+## Résultats
+
+Vérification : build Release 0 avertissement/0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement. Le contrôle documentaire PowerShell n'a pas pu être relancé (hôte Windows
+PowerShell de l'environnement indisponible) ; les modifications documentaires ne touchent ni les ID, ni
+les comptes, ni les références contrôlées.
+
+## État final de la tâche
+
+SUCCÈS (partiel) : défauts P0 (identité de segmentation) et P1 (transitions de reprise, bypass SHA-256,
+course du checkpoint) corrigés et validés par 290/290 tests. Restent : l'annulation réelle du flux en
+cours et l'IPC authentifié (frontières ADR-025), la politique de débit par profil, et les preuves de
+bout en bout sur serveur réel (PR-060/061/062).
+
+## Prochaine action
+
+Instance unique complète et IPC authentifié (ADR-025), puis preuves de bout en bout de la reprise et de
+la retransmission sur serveur réel (PR-060/061/062) avant l'UI Windows.
+
 
 
 

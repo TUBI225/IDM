@@ -46,7 +46,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
   d’un `206` de sondage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
-- Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
+- Sept projets MSTest séparent Domain, Application, Network, Storage, Persistence, hôte et intégration ;
   290 tests distincts réussissent après l'assemblage du `DownloadHost` (ADR-025).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
@@ -284,7 +284,7 @@ et le décodage base64url des en-têtes.
   `Verifying`/`Finalizing` → finalisation/réparation.
 - `Program.cs` : CLI `add`/`run`/`cancel` avec les adaptateurs réels (anti-rebind + SSRF, Storage
   durable, SQLite v4, base via `IDM_DB`).
-- Tests : 10 `DownloadHostTests`, 7 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`.
+- Tests : 10 `DownloadHostTests`, 9 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`.
 - Vérification canonique : build Release 0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
   formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
 - Restent : instance unique par utilisateur et IPC authentifié (ADR-025), politique de débit par

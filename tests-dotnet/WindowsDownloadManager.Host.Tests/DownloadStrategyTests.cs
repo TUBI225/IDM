@@ -82,6 +82,49 @@ public sealed class DownloadStrategyTests
             () => DownloadStrategy.Select(null!, new DownloadHostOptions()));
     }
 
+    [TestMethod]
+    public void Select_RangeWithoutStrongIdentity_ChoosesSingle()
+    {
+        var resource = WeakIdentityResource(length: 100, supportsRanges: true);
+
+        Assert.AreEqual(
+            DownloadRunKind.Single,
+            DownloadStrategy.Select(
+                resource,
+                new DownloadHostOptions(Connections: 4, Segments: 4, DynamicChunkSize: 64 * 1024)));
+    }
+
+    [TestMethod]
+    public void Select_WeakEntityTag_ChoosesSingle()
+    {
+        var resource = new RemoteResourceInfo(
+            Uri,
+            Uri,
+            100,
+            SuggestedFileName: null,
+            ContentType: null,
+            EntityTag: "W/\"v1\"",
+            LastModified: null,
+            SupportsByteRanges: true);
+
+        Assert.AreEqual(
+            DownloadRunKind.Single,
+            DownloadStrategy.Select(
+                resource,
+                new DownloadHostOptions(Connections: 4, Segments: 4, DynamicChunkSize: 64 * 1024)));
+    }
+
+    private static RemoteResourceInfo WeakIdentityResource(long? length, bool supportsRanges) =>
+        new(
+            Uri,
+            Uri,
+            length,
+            SuggestedFileName: null,
+            ContentType: null,
+            EntityTag: null,
+            LastModified: null,
+            supportsRanges);
+
     private static RemoteResourceInfo Resource(long? length, bool supportsRanges) =>
         new(
             Uri,

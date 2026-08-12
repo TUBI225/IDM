@@ -29,7 +29,7 @@ l’environnement de développement a été exécutée.
 ## Bibliothèques
 
 Le prototype Python utilise uniquement la bibliothèque standard. Le produit C# utilise la BCL .NET.
-Les six projets de test utilisent `MSTest.Sdk` 4.3.2. `Microsoft.Data.Sqlite` 10.0.10 est installé
+Les sept projets de test utilisent `MSTest.Sdk` 4.3.2. `Microsoft.Data.Sqlite` 10.0.10 est installé
 dans Persistence. `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 est épinglé explicitement pour éviter la
 version transitive 2.1.11 signalée vulnérable.
 

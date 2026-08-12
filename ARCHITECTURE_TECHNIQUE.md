@@ -429,10 +429,9 @@ L’empreinte officielle distante est extraite par `Sha256HeaderParser` depuis `
 `x-checksum-sha256`, `x-sha256-checksum`, `x-goog-hash` et `x-amz-checksum-sha256` (hex 64 ou base64/base64url
 32 octets, normalisés en hexadécimal majuscule), portée par `RemoteIdentity.Sha256`, puis persistée dans la
 colonne dédiée `remote_sha256` de la migration v4 — distincte du hash local `verified_sha256`. La valeur
-attendue par défaut à la finalisation est `RemoteIdentity.Sha256` et la validation est stricte
-(`allowForcedBypass: false`) : une divergence bloque sans mutation. Le forçage (`allowForcedBypass: true`)
-reste un choix explicite de l’appelant. La réconciliation compare les deux empreintes et traite une
-empreinte concordante comme preuve d’identité forte ; une divergence est une contradiction bloquante.
+attendue à la finalisation est `RemoteIdentity.Sha256` et la validation est stricte : une divergence
+bloque sans mutation, sans jamais pouvoir être contournée. La réconciliation compare les deux empreintes
+et traite une empreinte concordante comme preuve d’identité forte ; une divergence est une contradiction bloquante.
 
 Lors d’une réparation, le même hash est recalculé sur le temporaire ou la destination avant move ou
 commit `Completed`. Une divergence bloque sans mutation. Cette empreinte garantit la stabilité entre

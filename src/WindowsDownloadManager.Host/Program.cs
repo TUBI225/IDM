@@ -15,6 +15,14 @@ internal static class Program
             return 2;
         }
 
+        var singleInstanceName = $"Local\\IDM-DownloadManager-{Environment.UserName}";
+        using var singleInstance = new Mutex(initiallyOwned: true, singleInstanceName, out var singleInstanceAcquired);
+        if (!singleInstanceAcquired)
+        {
+            Console.Error.WriteLine("Another idm instance is already running for this user.");
+            return 3;
+        }
+
         using var cancellation = new CancellationTokenSource();
         Console.CancelKeyPress += (_, eventArgs) =>
         {

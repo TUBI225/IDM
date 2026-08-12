@@ -26,19 +26,10 @@ public sealed class DownloadFinalizationCoordinator
 
     public async ValueTask FinalizeAsync(DownloadTask task, CancellationToken cancellationToken)
     {
-        await FinalizeAsync(task, expectedSha256: null, DestinationCollisionPolicy.Fail, allowForcedBypass: false, cancellationToken).ConfigureAwait(false);
-    }
-
-    public async ValueTask FinalizeAsync(
-        DownloadTask task,
-        string? expectedSha256,
-        CancellationToken cancellationToken)
-    {
         await FinalizeAsync(
                 task,
-                expectedSha256,
+                expectedSha256: null,
                 DestinationCollisionPolicy.Fail,
-                allowForcedBypass: false,
                 cancellationToken)
             .ConfigureAwait(false);
     }
@@ -47,22 +38,6 @@ public sealed class DownloadFinalizationCoordinator
         DownloadTask task,
         string? expectedSha256,
         DestinationCollisionPolicy collisionPolicy,
-        CancellationToken cancellationToken)
-    {
-        await FinalizeAsync(
-                task,
-                expectedSha256,
-                collisionPolicy,
-                allowForcedBypass: false,
-                cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    public async ValueTask FinalizeAsync(
-        DownloadTask task,
-        string? expectedSha256,
-        DestinationCollisionPolicy collisionPolicy,
-        bool allowForcedBypass,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(task);
@@ -98,10 +73,7 @@ public sealed class DownloadFinalizationCoordinator
             if (effectiveExpectedSha256 is not null &&
                 !HashesMatch(verifiedSha256, effectiveExpectedSha256))
             {
-                if (!allowForcedBypass)
-                {
-                    throw new InvalidDataException("The temporary file SHA-256 does not match the expected value.");
-                }
+                throw new InvalidDataException("The temporary file SHA-256 does not match the expected value.");
             }
 
             task.RecordVerifiedSha256(verifiedSha256);

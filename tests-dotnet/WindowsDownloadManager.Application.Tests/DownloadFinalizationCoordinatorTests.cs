@@ -136,7 +136,11 @@ public sealed class DownloadFinalizationCoordinatorTests
             new RecordingRepository(events));
 
         await Assert.ThrowsExactlyAsync<InvalidDataException>(async () =>
-            await coordinator.FinalizeAsync(task, new string('0', 64), CancellationToken.None));
+            await coordinator.FinalizeAsync(
+                task,
+                new string('0', 64),
+                DestinationCollisionPolicy.Fail,
+                CancellationToken.None));
 
         Assert.AreEqual(DownloadState.Verifying, task.State);
         Assert.IsNull(task.VerifiedSha256);
@@ -229,31 +233,7 @@ public sealed class DownloadFinalizationCoordinatorTests
     }
 
     [TestMethod]
-    public async Task Finalize_HashMismatch_WithAllowForcedBypassTrue_Succeeds()
-    {
-        var events = new List<string>();
-        var task = TaskIn(DownloadState.Verifying);
-        var coordinator = new DownloadFinalizationCoordinator(
-            new StubInspector(temporaryExists: true, destinationExists: false),
-            new StubHasher(VerifiedSha256),
-            new RecordingFinalizer(events),
-            new RecordingRepository(events));
-
-        var mismatchingExpectedHash = "1111111111111111111111111111111111111111111111111111111111111111";
-
-        await coordinator.FinalizeAsync(
-            task,
-            mismatchingExpectedHash,
-            DestinationCollisionPolicy.Fail,
-            allowForcedBypass: true,
-            CancellationToken.None);
-
-        Assert.AreEqual(DownloadState.Completed, task.State);
-        Assert.AreEqual(VerifiedSha256, task.VerifiedSha256);
-    }
-
-    [TestMethod]
-    public async Task Finalize_HashMismatch_WithAllowForcedBypassFalse_Throws()
+    public async Task Finalize_HashMismatch_Throws()
     {
         var events = new List<string>();
         var task = TaskIn(DownloadState.Verifying);
@@ -270,7 +250,6 @@ public sealed class DownloadFinalizationCoordinatorTests
                 task,
                 mismatchingExpectedHash,
                 DestinationCollisionPolicy.Fail,
-                allowForcedBypass: false,
                 CancellationToken.None));
     }
 
@@ -311,29 +290,6 @@ public sealed class DownloadFinalizationCoordinatorTests
         Assert.AreEqual(DownloadState.Verifying, task.State);
         Assert.IsNull(task.VerifiedSha256);
         Assert.AreEqual(0, events.Count);
-    }
-
-    [TestMethod]
-    public async Task Finalize_RemoteIdentitySha256Mismatch_WithExplicitForcedBypass_Succeeds()
-    {
-        var events = new List<string>();
-        const string mismatchingRemoteSha256 = "1111111111111111111111111111111111111111111111111111111111111111";
-        var task = TaskIn(DownloadState.Verifying, remoteSha256: mismatchingRemoteSha256);
-        var coordinator = new DownloadFinalizationCoordinator(
-            new StubInspector(temporaryExists: true, destinationExists: false),
-            new StubHasher(VerifiedSha256),
-            new RecordingFinalizer(events),
-            new RecordingRepository(events));
-
-        await coordinator.FinalizeAsync(
-            task,
-            expectedSha256: null,
-            DestinationCollisionPolicy.Fail,
-            allowForcedBypass: true,
-            CancellationToken.None);
-
-        Assert.AreEqual(DownloadState.Completed, task.State);
-        Assert.AreEqual(VerifiedSha256, task.VerifiedSha256);
     }
 
     private sealed class RecordingFinalizer(List<string> events, bool rejectRepair = false) : ITemporaryFileFinalizer
