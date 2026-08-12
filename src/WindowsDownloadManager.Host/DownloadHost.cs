@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using WindowsDownloadManager.Application.Abstractions;
 using WindowsDownloadManager.Application.Downloads;
 using WindowsDownloadManager.Application.RateLimiting;
@@ -27,6 +28,7 @@ public sealed class DownloadHost : IAsyncDisposable
     private readonly IRetryPolicy? _retryPolicy;
     private readonly Func<DownloadTask, string> _temporaryPathFactory;
     private readonly HashSet<Guid> _submittedIds = [];
+    private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _runningTokens = new();
     private bool _disposed;
 
     public DownloadHost(
@@ -108,7 +110,23 @@ public sealed class DownloadHost : IAsyncDisposable
                 return null;
             }
 
-            await ExecuteTaskAsync(task, cancellationToken).ConfigureAwait(false);
+            var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _runningTokens[task.Id] = linked;
+            try
+            {
+                await ExecuteTaskAsync(task, linked.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Annulation spécifique à la tâche (CancelAsync/PauseAsync) : l'appelant a transité
+                // la tâche vers son état cible ; on poursuit avec les autres tâches planifiées.
+            }
+            finally
+            {
+                _runningTokens.TryRemove(task.Id, out _);
+                linked.Dispose();
+            }
+
             return task;
         }
         finally
@@ -136,6 +154,11 @@ public sealed class DownloadHost : IAsyncDisposable
 
     public async ValueTask CancelAsync(Guid downloadId, CancellationToken cancellationToken)
     {
+        if (_runningTokens.TryGetValue(downloadId, out var running))
+        {
+            running.Cancel();
+        }
+
         var task = await RequireTaskAsync(downloadId, cancellationToken).ConfigureAwait(false);
         if (!DownloadStateMachine.CanTransition(task.State, DownloadState.Cancelled))
         {
@@ -148,6 +171,11 @@ public sealed class DownloadHost : IAsyncDisposable
 
     public async ValueTask PauseAsync(Guid downloadId, CancellationToken cancellationToken)
     {
+        if (_runningTokens.TryGetValue(downloadId, out var running))
+        {
+            running.Cancel();
+        }
+
         var task = await RequireTaskAsync(downloadId, cancellationToken).ConfigureAwait(false);
         if (!DownloadStateMachine.CanTransition(task.State, DownloadState.PauseRequested))
         {

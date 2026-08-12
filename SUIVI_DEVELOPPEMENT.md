@@ -3985,6 +3985,50 @@ bout en bout sur serveur réel (PR-060/061/062).
 Instance unique complète et IPC authentifié (ADR-025), puis preuves de bout en bout de la reprise et de
 la retransmission sur serveur réel (PR-060/061/062) avant l'UI Windows.
 
+---
+
+# Entrée 2026-08-12 — Annulation réelle et IPC authentifié (ADR-025)
+
+## Objectif
+
+Compléter les frontières ADR-025 : permettre à la CLI de contrôler un `idm run` en cours (annuler ou
+mettre en pause un téléchargement) sans partager la base SQLite, et faire de l'annulation un arrêt
+réel du flux réseau (plus un simple UPSERT d'état).
+
+## Travail réalisé
+
+- `DownloadHost` : annulation réelle par tâche. `RunOnceAsync` crée un `CancellationTokenSource` lié au
+  jeton global et enregistré par identifiant ; `CancelAsync`/`PauseAsync` annulent ce jeton avant de
+  transiter l'état, ce qui interrompt le flux réseau en cours. L'annulation spécifique à une tâche ne
+  stoppe pas la boucle globale (attrapée dans `RunOnceAsync` quand le jeton global n'est pas annulé).
+- `IpcCommandServer` : serveur de commandes du processus `run` — pipe nommé par utilisateur
+  (`idm-<user>`, DACL héritée du processus créateur), protocole textuel `CANCEL <id>` / `PAUSE <id>`
+  avec accusé `OK`/`ERR`. Le pipe en attente est toujours disposé à l'arrêt du serveur.
+- `IpcCommandClient` : client de la CLI — connexion au pipe avec délai ; retourne `false` si aucun
+  `idm run` n'est joignable.
+- `Program.cs` : `run` démarre le serveur IPC pendant l'exécution ; `cancel`/`pause` passent par l'IPC
+  quand un processus est actif, sinon appliquent la transition directement si l'instance unique est
+  libre (erreur 3 si une instance active ne répond pas).
+- Tests : 24 `DownloadHostTests` (+3 : annulation réelle pendant le transfert, serveur IPC
+  `CANCEL`, serveur IPC `PAUSE`).
+
+## Résultats
+
+Vérification : build Release 0 avertissement/0 erreur ; 293/293 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement.
+
+## État final de la tâche
+
+SUCCÈS (partiel) : l'annulation et la pause deviennent réelles (arrêt du flux) et contrôlables depuis
+la CLI via un canal IPC isolé par utilisateur. Restent : la politique de débit par profil, la
+retransmission throttlée, la concurrence bornée réelle (`MaxConcurrentDownloads`) et les preuves de
+bout en bout sur serveur réel (PR-060/061/062).
+
+## Prochaine action
+
+Preuves de bout en bout de la reprise et de la retransmission sur serveur réel (PR-060/061/062), puis
+la politique de débit par profil et la retransmission throttlée avant l'UI Windows.
+
 
 
 

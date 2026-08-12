@@ -228,6 +228,83 @@ public sealed class DownloadHostTests
     }
 
     [TestMethod]
+    public async Task CancelAsync_WhileTransferring_StopsTheRunningDownloadAndPersistsCancelled()
+    {
+        var repository = new StubRepository();
+        var writer = new StubWriter(initialLength: 3);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var contentSource = new StubBlockingContentSource(Content, release);
+        var analyzer = new StubAnalyzer(Resource(uri: null, length: Content.Length, supportsRanges: true));
+        var task = ResumedTask(confirmedBytes: 3, identity: Identity(Content.Length, supportsRanges: true));
+        await repository.SaveAsync(task, CancellationToken.None);
+        var host = CreateHost(
+            repository,
+            writer,
+            analyzer,
+            contentSource,
+            new StubRangeReader(Content),
+            new StubLocalRangeReader(Content.AsMemory(0, 3).ToArray()),
+            new DownloadHostOptions(Connections: 1, Segments: 1));
+
+        var run = host.RunPendingAsync(CancellationToken.None).AsTask();
+        await contentSource.Opened.Task;
+        await host.CancelAsync(task.Id, CancellationToken.None);
+
+        release.SetResult();
+        var count = await run;
+
+        Assert.AreEqual(DownloadState.Cancelled, task.State);
+        Assert.AreEqual(1, count);
+        Assert.AreEqual(0, writer.WriteCount);
+    }
+
+    [TestMethod]
+    public async Task IpcCommandServer_HandlesCancelCommand_InvokesHandlerAndRespondsOk()
+    {
+        var invoked = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var server = new IpcCommandServer(
+            cancelHandler: (id, token) =>
+            {
+                invoked.SetResult(id);
+                return ValueTask.CompletedTask;
+            },
+            pauseHandler: (id, token) => ValueTask.CompletedTask);
+
+        var id = Guid.NewGuid();
+        var ok = await IpcCommandClient.TrySendAsync(
+            "CANCEL",
+            id,
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None);
+
+        Assert.IsTrue(ok);
+        Assert.AreEqual(id, await invoked.Task);
+    }
+
+    [TestMethod]
+    public async Task IpcCommandServer_HandlesPauseCommand_InvokesHandlerAndRespondsOk()
+    {
+        var invoked = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var server = new IpcCommandServer(
+            cancelHandler: (id, token) => ValueTask.CompletedTask,
+            pauseHandler: (id, token) =>
+            {
+                invoked.SetResult(id);
+                return ValueTask.CompletedTask;
+            });
+
+        var id = Guid.NewGuid();
+        var ok = await IpcCommandClient.TrySendAsync(
+            "PAUSE",
+            id,
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None);
+
+        Assert.IsTrue(ok);
+        Assert.AreEqual(id, await invoked.Task);
+    }
+
+    [TestMethod]
     public async Task RunPending_HigherPriorityDownloadRunsFirst()
     {
         var repository = new StubRepository();
@@ -289,7 +366,7 @@ public sealed class DownloadHostTests
         StubRepository repository,
         StubWriter writer,
         StubAnalyzer analyzer,
-        StubContentSource contentSource,
+        IRemoteContentSource contentSource,
         StubRangeReader rangeReader,
         StubLocalRangeReader localRangeReader,
         DownloadHostOptions? options = null)
@@ -504,5 +581,62 @@ public sealed class DownloadHostTests
     }
 
     private sealed record RepositorySnapshot(DownloadState State, long ConfirmedBytes);
+
+    private sealed class StubBlockingContentSource(byte[] content, TaskCompletionSource release) : IRemoteContentSource
+    {
+        public TaskCompletionSource Opened { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<RemoteContentLease> OpenReadAsync(
+            RemoteResourceInfo resource,
+            long offset,
+            CancellationToken cancellationToken)
+        {
+            Opened.TrySetResult();
+            var start = (int)Math.Min(offset, content.Length);
+            return ValueTask.FromResult<RemoteContentLease>(
+                new(new BlockingReadStream(content.AsMemory(start).ToArray(), release), resource.Length));
+        }
+    }
+
+    private sealed class BlockingReadStream(byte[] content, TaskCompletionSource release) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => content.Length;
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        public override async Task<int> ReadAsync(
+            byte[] buffer,
+            int offset,
+            int count,
+            CancellationToken cancellationToken)
+        {
+            await release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            var bytes = Math.Min(count, content.Length);
+            if (bytes > 0)
+            {
+                Array.Copy(content, 0, buffer, offset, bytes);
+            }
+
+            return bytes;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException();
+
+        public override void SetLength(long value) =>
+            throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+    }
 }
 

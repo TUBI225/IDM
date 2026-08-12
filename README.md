@@ -75,7 +75,7 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
   consentement ;
 - processus hôte headless assemblé (`idm`) : stratégie simple/segmenté/dynamique, priorités, débit par
   bloc, reprise au démarrage et finalisation ;
-- 290 tests .NET de domaine, application, réseau, stockage, persistance, hôte et intégration.
+- 293 tests .NET de domaine, application, réseau, stockage, persistance, hôte et intégration.
 
 Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, l’interface et l’installateur.

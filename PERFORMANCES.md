@@ -195,7 +195,7 @@ travail local préservé, et il est annoncé (`EstimateCost`) avant tout consent
 débit, de coût CPU de la comparaison, de latence ou de gros fichier n'a été exécutée ; aucune
 performance n'est revendiquée et R-010 reste ouvert.
 
-La tranche assemblage du `DownloadHost` (ADR-025) porte la suite à 290 tests fonctionnels. Le
+La tranche assemblage du `DownloadHost` (ADR-025) porte la suite à 293 tests fonctionnels. Le
 processus hôte ajoute une couche d'orchestration (stratégie, planning, débit par bloc) autour des
 composants déjà testés ; `ThrottledRemoteContentSource` acquiert des jetons pour chaque bloc de 64 Kio
 et le planning reconstruit au démarrage lit les tâches non terminales. Aucune mesure de débit réel,

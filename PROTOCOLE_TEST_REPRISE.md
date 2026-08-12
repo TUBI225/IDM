@@ -704,10 +704,10 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Cycle : `New` → stratégie → vérification → finalisation ; `Downloading` → reprise, sinon décision
   `ForcedResumeEngine` (retransmission contrôlée ou arrêt sûr via `Reconnecting → TestingResume`) ;
   `Verifying`/`Finalizing` → finalisation/réparation.
-- Tests : 10 `DownloadHostTests`, 9 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`
-  (21 au total — cycle neuf, reprise, retransmission, arrêt sûr, finalisation, réparation, annulation,
-  pause, priorité, stratégie, débit).
-- Vérification canonique : build Release 0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
+- Tests : 13 `DownloadHostTests`, 9 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`
+  (24 au total — cycle neuf, reprise, retransmission, arrêt sûr, finalisation, réparation, annulation,
+  pause, priorité, stratégie, débit, annulation en cours, IPC).
+- Vérification canonique : build Release 0 erreur ; 293/293 tests réussis, 0 échec, 0 ignoré ;
   formatage sans changement ; documentation 16/16.
 - Restent : instance unique par utilisateur et IPC authentifié (ADR-025), profil de débit, preuves de
   bout en bout (PR-060/061/062) et inter-volume réel.

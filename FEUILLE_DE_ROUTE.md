@@ -50,7 +50,7 @@ Dernière mise à jour : 2026-08-12
 
 ## Prochaine action recommandée
 
-Le `DownloadHost` est assemblé (290 tests). Enchaîner les preuves de bout en bout
+Le `DownloadHost` est assemblé (293 tests). Enchaîner les preuves de bout en bout
 (PR-060/061/062), l'instance unique et l'IPC ADR-025, puis l'inter-volume réel avant l’UI Windows.
 
 ## 3. Plan détaillé jusqu’à la version stable
