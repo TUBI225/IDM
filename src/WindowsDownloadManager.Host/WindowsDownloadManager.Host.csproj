@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>idm</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WindowsDownloadManager.Application\WindowsDownloadManager.Application.csproj" />
+    <ProjectReference Include="..\WindowsDownloadManager.Domain\WindowsDownloadManager.Domain.csproj" />
+    <ProjectReference Include="..\WindowsDownloadManager.Network\WindowsDownloadManager.Network.csproj" />
+    <ProjectReference Include="..\WindowsDownloadManager.Persistence\WindowsDownloadManager.Persistence.csproj" />
+    <ProjectReference Include="..\WindowsDownloadManager.Storage\WindowsDownloadManager.Storage.csproj" />
+  </ItemGroup>
+</Project>

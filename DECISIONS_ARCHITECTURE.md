@@ -180,7 +180,7 @@ confirmation et politique de télémétrie (par défaut aucune).
 ## ADR-025 — Hôte de téléchargement utilisateur séparé
 
 - Date : 2026-08-03.
-- Statut : ACCEPTÉE ; ORCHESTRATEUR DE BIBLIOTHÈQUE PARTIELLEMENT IMPLÉMENTÉ, HÔTE RESTANT.
+- Statut : ACCEPTÉE ; HÔTE ASSEMBLÉ LE 2026-08-12, INSTANCE UNIQUE ET IPC RESTANTS.
 - Problème : les transferts doivent survivre à la fermeture de l’interface sans donner plusieurs
   propriétaires à SQLite, aux fichiers temporaires ou à la planification.
 - Options étudiées : moteur dans WinUI ; application tray unique ; service Windows ; processus
@@ -306,6 +306,15 @@ contrôlée, arrêt sûr — sans jamais contourner une protection. M-012 ajoute
 absent, arrêt sûr à toute divergence) et `EstimateCost` qui annonce le coût réseau total et exige un
 consentement explicite au-delà du seuil configurable (opt-in). Restent le consentement UI (F-012) et les
 preuves de bout en bout sur serveur réel (PR-060/061/062).
+
+## Extension ADR-025 — processus hôte assemblé (2026-08-12)
+
+Le projet src/WindowsDownloadManager.Host (assembly idm) assemble le moteur : DownloadHost exécute
+le cycle complet (ajout, stratégie simple/segmenté/dynamique, vérification, finalisation, reprise au
+checkpoint, décision des sept niveaux, retransmission contrôlée, priorités, débit par bloc) et
+reconstruit le planning au démarrage via ListNonTerminalAsync. La CLI dd/un/cancel câble les
+adadaptateurs réels. Les frontières restantes de l'ADR restent l'instance unique par utilisateur et l'IPC
+authentifié, ainsi que la politique de débit par profil.
 
 ## 5. Résultat de la porte G1
 

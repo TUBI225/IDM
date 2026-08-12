@@ -3884,6 +3884,57 @@ SUCCÈS (partiel) : retransmission contrôlée et coût annoncé testés. Resten
 Assembler le `DownloadHost` (scheduler + débit + segmentation + reprise + retransmission), puis les
 preuves de bout en bout (PR-060/061/062) avant l'UI Windows.
 
+---
+
+# Entrée 2026-08-12 — Assemblage du DownloadHost (ADR-025)
+
+## Objectif
+
+Réunir tous les composants du moteur dans un processus hôte headless unique, propriétaire du dépôt,
+des fichiers et du scheduler : ajout, stratégie simple/segmenté/dynamique, vérification, finalisation,
+reprise au checkpoint, décision des sept niveaux, retransmission contrôlée, priorités et contrôle de
+débit.
+
+## Travail réalisé
+
+- Nouveau projet exécutable `src/WindowsDownloadManager.Host` (assembly `idm`) référencé par la
+  solution, et son projet de tests `tests-dotnet/WindowsDownloadManager.Host.Tests`.
+- `DownloadHost` (Application headless) : cycle complet via ports injectés. `AddAsync` crée et soumet ;
+  `RunPendingAsync` reconstruit le planning au démarrage puis exécute les tâches ;
+  `CancelAsync`/`PauseAsync` transitent selon la machine d'états ; `DisposeAsync` possède le dépôt.
+- `RebuildScheduleAsync` découvre les tâches non terminales via la nouvelle méthode du dépôt
+  `ListNonTerminalAsync` (implémentation par défaut vide ; `SqliteDownloadRepository` la surcharge par
+  un `SELECT` des états hors `Completed`/`Cancelled`), ce qui permet la reprise au démarrage.
+- `DownloadStrategy` : choix pur simple / segmenté / dynamique (longueur inconnue ou nulle, absence de
+  Range ou connexion unique → simple ; connexions multiples + chunks → dynamique ; segments → statique).
+- `ThrottledRemoteContentSource` : décorateur de production qui acquiert les jetons du
+  `BandwidthController` à chaque lecture de bloc.
+- Cycle : `New` → run selon la stratégie → `Verifying` → finalisation ; `Downloading` → reprise via le
+  `StartupRecoveryCoordinator`, sinon décision `ForcedResumeEngine` (retransmission contrôlée, arrêt
+  sûr via le chemin légal `Reconnecting → TestingResume` de la machine) ; `Verifying`/`Finalizing` →
+  finalisation/réparation.
+- `Program.cs` : CLI `add`/`run`/`cancel` câblant les adaptateurs réels (Network anti-rebind + SSRF,
+  Storage durable, SQLite v4), base via `IDM_DB`.
+- Tests : 10 `DownloadHostTests` (cycle neuf, reprise, retransmission depuis zéro, arrêt sûr sur
+  contradiction, finalisation, réparation, annulation, pause, priorité, arguments), 7
+  `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`.
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (ADR-025 -> HÔTE PRÉSENT).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : processus hôte assemblé et testé avec les vrais adaptateurs. Restent l'instance
+unique par utilisateur et l'IPC authentifié (frontières ADR-025), la politique de débit par profil, et
+les preuves de bout en bout sur serveur réel (PR-060/061/062).
+
+## Prochaine action
+
+Preuves de bout en bout de la reprise/retransmission sur serveur réel (PR-060/061/062) ou l'instance
+unique/IPC ADR-025 avant l'UI Windows.
+
 
 
 

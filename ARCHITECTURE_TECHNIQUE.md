@@ -564,3 +564,21 @@ réseau déjà reçus (LIM-002). Un coût au-dessus du seuil configurable exige 
 (opt-in, PR-062). La confirmation de progression reste contiguë et uniquement après écriture durable.
 L'intégration au futur `DownloadHost`, le consentement UI (F-012) et les preuves de bout en bout sur
 serveur réel (PR-060/061/062) restent.
+
+## Extension J5 — processus hôte assemblé (DownloadHost, ADR-025, 2026-08-12)
+
+Le projet `WindowsDownloadManager.Host` (assembly `idm`) réunit les composants du moteur dans un
+processus headless unique, propriétaire du dépôt, des fichiers et du scheduler. `DownloadHost` reçoit
+les ports (`DownloadHostServices`) et expose `AddAsync`, `RebuildScheduleAsync`,
+`RunPendingAsync`/`RunOnceAsync`, `CancelAsync`, `PauseAsync` et `DisposeAsync`. Le planning est
+reconstruit au démarrage depuis `IDownloadRepository.ListNonTerminalAsync` (défaut vide ; SQLite la
+surcharge en excluant `Completed` et `Cancelled`).
+
+Le cycle d'une tâche : `New` → analyse → `DownloadStrategy` (simple, segmenté statique ou dynamique
+selon la longueur, le support Range et les options) → vérification → finalisation ; `Downloading` →
+`StartupRecoveryCoordinator` puis reprise au checkpoint, sinon `ForcedResumeEngine` (retransmission
+contrôlée par `ControlledRetransmissionEngine`, ou arrêt sûr en empruntant le chemin légal
+`Reconnecting → TestingResume` de la machine) ; `Verifying`/`Finalizing` → finalisation/réparation.
+`ThrottledRemoteContentSource` applique le `BandwidthController` par bloc de lecture. La CLI `idm`
+(`add`/`run`/`cancel`, base via `IDM_DB`) câble les adaptateurs réels anti-rebind/SSRF, Storage durable
+et SQLite v4. Restent l'instance unique par utilisateur, l'IPC authentifié et le profil de débit.

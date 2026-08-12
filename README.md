@@ -73,26 +73,26 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - retransmission contrôlée : comparaison continue du flux depuis zéro, préfixe local préservé, reprise
   d’écriture au premier octet absent, arrêt sûr à toute divergence et coût réseau annoncé avant
   consentement ;
-- 271 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- processus hôte headless assemblé (`idm`) : stratégie simple/segmenté/dynamique, priorités, débit par
+  bloc, reprise au démarrage et finalisation ;
+- 290 tests .NET de domaine, application, réseau, stockage, persistance, hôte et intégration.
 
 Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, l’interface et l’installateur.
 
 ## Exécution
 
-Avec Python 3.11 ou plus récent, depuis la racine du projet :
+Avec le moteur C# headless (`src/WindowsDownloadManager.Host`, assembly `idm`) :
 
 ```powershell
-python -m idm add "https://example.com/large-file.iso" --output "C:\Downloads"
-python -m idm run 1
-python -m idm list
+dotnet run --project src\WindowsDownloadManager.Host -- add "https://example.com/large-file.iso" "C:\Downloads\large-file.iso"
+dotnet run --project src\WindowsDownloadManager.Host -- run
+dotnet run --project src\WindowsDownloadManager.Host -- cancel <id>
 ```
 
-Interrompre `run` avec `Ctrl+C` place la tâche en `EN_PAUSE` après synchronisation des octets
-reçus. Relancer `python -m idm run 1` pour reprendre.
-
-Les données de contrôle se trouvent par défaut dans `.idm-data/downloads.sqlite3`. Pour les
-tests avec un serveur local, ajouter `--allow-private` avant la sous-commande.
+`Ctrl+C` interrompt `run` ; les octets reçus sont synchronisés et la reprise/retransmission est
+assurée au redémarrage. La base SQLite se trouve par défaut dans `idm.db` du répertoire courant
+(optionnelle via la variable d’environnement `IDM_DB`).
 
 ## Tests
 

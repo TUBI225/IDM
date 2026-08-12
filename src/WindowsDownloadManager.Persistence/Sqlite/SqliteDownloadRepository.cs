@@ -171,6 +171,57 @@ public sealed class SqliteDownloadRepository : IDownloadRepository, IAsyncDispos
             reader.IsDBNull(10) ? null : reader.GetString(10));
     }
 
+    public async ValueTask<IReadOnlyList<DownloadTask>> ListNonTerminalAsync(
+        CancellationToken cancellationToken)
+    {
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT original_url, destination_path, state, confirmed_bytes,
+                   temporary_path, final_url, total_size, etag, last_modified, supports_byte_ranges,
+                   verified_sha256, remote_sha256, id
+            FROM downloads
+            WHERE state NOT IN (14, 23)
+            ORDER BY created_at;
+            """;
+        var tasks = new List<DownloadTask>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            tasks.Add(MapTask(reader));
+        }
+
+        return tasks;
+    }
+
+    private static DownloadTask MapTask(Microsoft.Data.Sqlite.SqliteDataReader reader)
+    {
+        var id = Guid.ParseExact(reader.GetString(12), "D");
+        var stateValue = reader.GetInt32(2);
+        if (!Enum.IsDefined(typeof(DownloadState), stateValue))
+        {
+            throw new InvalidDataException($"Unknown persisted download state: {stateValue}.");
+        }
+
+        var temporaryPath = reader.IsDBNull(4) ? null : reader.GetString(4);
+        var remoteIdentity = ReadRemoteIdentity(reader);
+        if ((temporaryPath is null) != (remoteIdentity is null))
+        {
+            throw new InvalidDataException("The persisted recovery metadata is incomplete.");
+        }
+
+        return DownloadTask.Restore(
+            id,
+            new Uri(reader.GetString(0), UriKind.Absolute),
+            reader.GetString(1),
+            (DownloadState)stateValue,
+            reader.GetInt64(3),
+            temporaryPath,
+            remoteIdentity,
+            reader.IsDBNull(10) ? null : reader.GetString(10));
+    }
+
     public async ValueTask SaveAsync(DownloadTask task, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(task);

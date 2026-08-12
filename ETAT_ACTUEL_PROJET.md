@@ -47,7 +47,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  271 tests distincts réussissent après la retransmission contrôlée (M-012).
+  290 tests distincts réussissent après l'assemblage du `DownloadHost` (ADR-025).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
@@ -179,16 +179,17 @@ sauf correction nécessaire à une fixture de parité approuvée.
 ## 7. Décisions actives et décisions manquantes
 
 Actives : ADR-021 à ADR-029. ADR-026 est appliquée au profil direct ; ADR-027 possède une première
-implémentation v2. ADR-025 possède un orchestrateur de bibliothèque mais pas encore son processus hôte ;
-ADR-029 reste sans finalisation complète. Versions Windows
-minimales et packaging restent à décider.
+implémentation v2. ADR-025 possède désormais son processus hôte assemblé (`DownloadHost` + CLI `idm`) ;
+l'instance unique par utilisateur et l'IPC authentifié restent. ADR-029 reste sans finalisation
+complète. Versions Windows minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-M-012 a complété la retransmission contrôlée (comparaison continue, reprise au manque, coût annoncé)
-et la suite compte 271 tests. La prochaine étape consiste à assembler le `DownloadHost` (scheduler,
-débit, segmentation, reprise et retransmission dans un seul moteur) ; les preuves de bout en bout
-(PR-060/061/062) et l'inter-volume réel resteront nécessaires avant l'UI.
+Le `DownloadHost` (ADR-025) est assemblé : processus headless `idm` qui réunit ajout, stratégie
+simple/segmenté/dynamique, vérification, finalisation, reprise, décision des sept niveaux,
+retransmission contrôlée, priorités et contrôle de débit ; la suite compte 290 tests. La prochaine
+étape consiste aux preuves de bout en bout sur serveur réel (PR-060/061/062) et/ou à l'instance unique
+et l'IPC authentifié (frontières ADR-025) avant l'UI.
 
 ## 9. Preuve collision et inter-volume — 2026-08-11
 
@@ -269,3 +270,22 @@ et le décodage base64url des en-têtes.
   formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
 - Restent : intégration au futur `DownloadHost`, consentement UI (F-012/PR-062) et preuves de bout en
   bout sur serveur réel (PR-060/061).
+
+## 14. Assemblage du DownloadHost (ADR-025) — 2026-08-12
+
+- Nouveau projet exécutable `src/WindowsDownloadManager.Host` (assembly `idm`) et son projet de tests.
+- `DownloadHost` : cycle complet via ports injectés — `AddAsync`, `RunPendingAsync` (planning
+  reconstruit au démarrage), `CancelAsync`, `PauseAsync`, `DisposeAsync` (possède le dépôt).
+- `ListNonTerminalAsync` ajoutée au dépôt (défaut vide, surchargée par SQLite avec un `SELECT` des
+  états hors `Completed`/`Cancelled`) pour la reprise au démarrage.
+- `DownloadStrategy` (simple/segmenté/dynamique) et `ThrottledRemoteContentSource` (débit par bloc).
+- Cycle : `New` → stratégie → `Verifying` → finalisation ; `Downloading` → reprise, sinon décision
+  `ForcedResumeEngine` (retransmission ou arrêt sûr via `Reconnecting → TestingResume`) ;
+  `Verifying`/`Finalizing` → finalisation/réparation.
+- `Program.cs` : CLI `add`/`run`/`cancel` avec les adaptateurs réels (anti-rebind + SSRF, Storage
+  durable, SQLite v4, base via `IDM_DB`).
+- Tests : 10 `DownloadHostTests`, 7 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`.
+- Vérification canonique : build Release 0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
+- Restent : instance unique par utilisateur et IPC authentifié (ADR-025), politique de débit par
+  profil, preuves de bout en bout (PR-060/061/062) et inter-volume réel.

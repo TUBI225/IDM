@@ -50,8 +50,8 @@ Dernière mise à jour : 2026-08-12
 
 ## Prochaine action recommandée
 
-Assembler le `DownloadHost` (scheduler + débit + segmentation + reprise + retransmission), puis les
-preuves de bout en bout (PR-060/061/062) et l'inter-volume réel avant l’UI Windows.
+Le `DownloadHost` est assemblé (290 tests). Enchaîner les preuves de bout en bout
+(PR-060/061/062), l'instance unique et l'IPC ADR-025, puis l'inter-volume réel avant l’UI Windows.
 
 ## 3. Plan détaillé jusqu’à la version stable
 

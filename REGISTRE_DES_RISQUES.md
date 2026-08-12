@@ -226,3 +226,12 @@ absent et s'arrête immédiatement à toute divergence (PR-061), l'ancien partie
 réseau total est annoncé avant exécution et un coût significatif exige un consentement explicite
 (PR-062). Le risque reste ouvert pour l'intégration hôte, le consentement UI et les preuves sur serveur
 réel (PR-060/061/062).
+
+## Réduction de risques — DownloadHost assemblé du 2026-08-12
+
+Le processus hôte `idm` (ADR-025) réunit les composants du moteur et reconstitue le planning au
+démarrage via `ListNonTerminalAsync` : R-002 et R-011 sont réduits pour la reprise automatique des
+tâches non terminales persistées. R-009 (runtime distribué) reste ouvert : l'exécutable `idm` requiert
+le runtime .NET ; la publication autonome et l'installation restent à construire. R-023 (versionnement
+Git) est renforcé par des commits atomiques code+documentation. L'instance unique par utilisateur et
+l'IPC authentifié (hôte orphelin, usurpation) restent les risques ouverts d'ADR-025.

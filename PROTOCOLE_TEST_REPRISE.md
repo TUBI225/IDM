@@ -692,3 +692,22 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   formatage sans changement ; documentation 16/16.
 - Restent : intégration au futur `DownloadHost`, consentement UI (F-012/PR-062) et preuves de bout en
   bout sur serveur réel (PR-060/061).
+
+## 34. Assemblage du DownloadHost — ADR-025 (2026-08-12)
+
+- Identifiants : ADR-025 / M-001 à M-015 / Q-001.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- Projet `src/WindowsDownloadManager.Host` (assembly `idm`) : processus headless qui réunit les
+  composants — `DownloadHost` (cycle), `DownloadStrategy` (simple/segmenté/dynamique),
+  `ThrottledRemoteContentSource` (débit par bloc), `RebuildScheduleAsync` (reprise au démarrage via
+  `ListNonTerminalAsync`), `Program.cs` (CLI `add`/`run`/`cancel` avec les adaptateurs réels).
+- Cycle : `New` → stratégie → vérification → finalisation ; `Downloading` → reprise, sinon décision
+  `ForcedResumeEngine` (retransmission contrôlée ou arrêt sûr via `Reconnecting → TestingResume`) ;
+  `Verifying`/`Finalizing` → finalisation/réparation.
+- Tests : 10 `DownloadHostTests`, 7 `DownloadStrategyTests`, 2 `ThrottledRemoteContentSourceTests`
+  (19 au total — cycle neuf, reprise, retransmission, arrêt sûr, finalisation, réparation, annulation,
+  pause, priorité, stratégie, débit).
+- Vérification canonique : build Release 0 erreur ; 290/290 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16.
+- Restent : instance unique par utilisateur et IPC authentifié (ADR-025), profil de débit, preuves de
+  bout en bout (PR-060/061/062) et inter-volume réel.
