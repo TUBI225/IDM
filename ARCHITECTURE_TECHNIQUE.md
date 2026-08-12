@@ -475,7 +475,8 @@ portion restante `[ConfirmedBytes, length)` en segments contigus (offsets absolu
 parallèle. `IRemoteBoundedContentSource` (Application) et `HttpRemoteContentSource.OpenBoundedReadAsync`
 (NETWORK) ouvrent des plages bornées `bytes=start-end` pour chaque segment, évitant le surplus réseau
 des plages ouvertes ; les sources sans plages bornées retombent sur `OpenReadAsync`. La redistribution
-dynamique (M-010) et l'intégration HTTP réelle multi-segments restent à construire.
+dynamique (M-010) est décrite dans l'extension J2 dédiée ; l'intégration HTTP réelle multi-segments
+reste à construire.
 
 ## Extension J2 — retry des échecs transitoires (2026-08-11)
 
@@ -508,3 +509,21 @@ attente domine), puis consomme les jetons. Le réapprovisionnement est calculé 
 d'une horloge injectable (temps écoulé × débit, plafonné au burst), et l'attente est délégable
 (injectable) pour les tests. La mesure réelle du débit sur gros fichiers (Q-003) et l'intégration au
 futur `DownloadHost` restent.
+
+## Extension J2 — segmentation dynamique (2026-08-12)
+
+`ChunkWorkQueue` (Application) découpe la longueur annoncée `[0, length)` en chunks de taille fixe.
+`TryAcquireNext` distribue atomiquement le prochain chunk aux connexions (verrou interne, ordre
+séquentiel) ; `MarkCompleted` marque un chunk ; `ComputeContiguousProgress` retourne le plus long
+préfixe de chunks entièrement complétés, de sorte que le checkpoint ne confirme jamais que du contigu
+(sémantique de reprise préservée).
+
+`DownloadOrchestrator.RunDynamicSegmentedAsync` analyse la ressource puis, si la taille est annoncée,
+les plages sont supportées et `connectionCount > 1`, lance N connexions qui tirent des chunks jusqu'à
+épuisement ; chaque chunk est transféré par plage bornée via `IRemoteBoundedContentSource` (repli
+plage ouverte sinon), exactement comme un segment statique. La redistribution est garantie par
+construction : une connexion rapide tire davantage de chunks qu'une connexion lente (auto-équilibrage),
+ce qui évite le goulot d'étranglement du segment le plus lent de la segmentation statique. Taille
+inconnue, nulle, plages non supportées ou `connectionCount == 1` replient sur la connexion unique.
+La redistribution pilotée par vitesse mesurée et l'intégration HTTP réelle multi-segments restent à
+construire.

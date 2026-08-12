@@ -175,3 +175,9 @@ La tranche empreinte distante porte la suite à 225 tests fonctionnels. Le coût
 d’en-têtes HTTP et une colonne SQLite supplémentaire ; il n’affecte pas le chemin de transfert. Aucun
 profil 1/10/100 Gio, coût CPU, débit disque ou gros fichier n’a été mesuré pour cette tranche. R-010
 reste ouvert et aucune performance n’est revendiquée.
+
+Les tranches segmentation (statique puis dynamique) portent la suite à 241 tests fonctionnels. La
+segmentation dynamique découpe la ressource en chunks : chaque connexion ouvre une plage bornée par
+chunk, donc le nombre de connexions simultanées reste borné par le pool de workers et le volume
+transféré par connexion s'équilibre naturellement. Aucun débit, gain multi-connexions, contention de
+la file ou mesure sur gros fichier n'a été mesuré ; aucune performance n'est revendiquée.

@@ -1,6 +1,7 @@
 using System.Buffers;
 using WindowsDownloadManager.Application.Abstractions;
 using WindowsDownloadManager.Application.Retries;
+using WindowsDownloadManager.Application.Segmenting;
 using WindowsDownloadManager.Domain.Downloads;
 
 namespace WindowsDownloadManager.Application.Downloads;
@@ -185,6 +186,93 @@ public sealed class DownloadOrchestrator
             _mutationLock.Release();
         }
     }
+    public async ValueTask<DownloadRunResult> RunDynamicSegmentedAsync(
+        DownloadTask task,
+        string temporaryPath,
+        int connectionCount,
+        int chunkSize,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentException.ThrowIfNullOrWhiteSpace(temporaryPath);
+        if (connectionCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(connectionCount));
+        }
+
+        if (chunkSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(chunkSize));
+        }
+
+        if (task.State != DownloadState.New || task.ConfirmedBytes != 0)
+        {
+            throw new InvalidOperationException("Only a new download with no confirmed bytes can use this operation.");
+        }
+
+        if (!Path.IsPathFullyQualified(temporaryPath))
+        {
+            throw new ArgumentException("The temporary path must be absolute.", nameof(temporaryPath));
+        }
+
+        if (string.Equals(temporaryPath, task.DestinationPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The temporary path must differ from the destination path.", nameof(temporaryPath));
+        }
+
+        await SaveAndTransitionAsync(task, DownloadState.Analyzing, cancellationToken).ConfigureAwait(false);
+        var resource = await _resourceAnalyzer.AnalyzeAsync(task.OriginalUri, cancellationToken)
+            .ConfigureAwait(false);
+
+        task.TransitionTo(DownloadState.Preparing);
+        task.RecordPreparation(temporaryPath, ToRemoteIdentity(resource));
+        await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+        await _temporaryFileWriter.PrepareNewAsync(temporaryPath, cancellationToken).ConfigureAwait(false);
+        await SaveAndTransitionAsync(task, DownloadState.Waiting, cancellationToken).ConfigureAwait(false);
+        await SaveAndTransitionAsync(task, DownloadState.Downloading, cancellationToken).ConfigureAwait(false);
+
+        if (resource.Length is null)
+        {
+            await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+        }
+        else if (resource.Length != 0)
+        {
+            if (resource.SupportsByteRanges && connectionCount > 1)
+            {
+                var queue = new ChunkWorkQueue(resource.Length.Value, chunkSize);
+                var writeLock = new SemaphoreSlim(1, 1);
+                var workers = new Task[connectionCount];
+                for (var index = 0; index < connectionCount; index++)
+                {
+                    workers[index] = Task.Run(
+                        () => TransferChunksAsync(
+                                task,
+                                temporaryPath,
+                                resource,
+                                queue,
+                                writeLock,
+                                cancellationToken)
+                            .AsTask(),
+                        cancellationToken);
+                }
+
+                await Task.WhenAll(workers).ConfigureAwait(false);
+                if (task.ConfirmedBytes != resource.Length.Value)
+                {
+                    throw new InvalidDataException("The dynamic segmented transfer did not confirm the full remote length.");
+                }
+            }
+            else
+            {
+                await TransferAsync(task, temporaryPath, resource, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        await SaveAndTransitionAsync(task, DownloadState.Verifying, cancellationToken).ConfigureAwait(false);
+        return new DownloadRunResult(task.Id, temporaryPath, task.ConfirmedBytes, task.State, resource);
+    }
+
+
 
 
     public async ValueTask<DownloadRunResult> RunNewAsync(
@@ -551,6 +639,40 @@ public sealed class DownloadOrchestrator
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private async ValueTask TransferChunksAsync(
+        DownloadTask task,
+        string temporaryPath,
+        RemoteResourceInfo resource,
+        ChunkWorkQueue queue,
+        SemaphoreSlim writeLock,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var chunk = queue.TryAcquireNext();
+            if (chunk is null)
+            {
+                break;
+            }
+
+            await TransferSegmentCoreAsync(
+                task,
+                temporaryPath,
+                resource,
+                new DownloadSegment(chunk.Value.StartOffset, chunk.Value.Length),
+                writeLock,
+                cancellationToken).ConfigureAwait(false);
+            queue.MarkCompleted(chunk.Value);
+
+            var progress = queue.ComputeContiguousProgress();
+            if (progress > task.ConfirmedBytes)
+            {
+                task.ConfirmPersistedBytes(progress);
+                await _downloadRepository.SaveAsync(task, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 

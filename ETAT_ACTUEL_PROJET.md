@@ -2,7 +2,7 @@
 
 Version documentaire : 2.6
 Date de création : 2026-08-03  
-Dernière mise à jour : 2026-08-11  
+Dernière mise à jour : 2026-08-12  
 Statut : TABLEAU DE BORD ACTIF — G2 PARTIELLE  
 Responsable logique : Chef de projet  
 Documents liés : `FEUILLE_DE_ROUTE.md`, `SUIVI_DEVELOPPEMENT.md`, `ERREURS_CONNNUES.md`
@@ -29,9 +29,9 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 
 | Statut | Nombre |
 |---|---:|
-| À FAIRE | 13 |
+| À FAIRE | 12 |
 | EN COURS | 1 |
-| PARTIEL | 18 |
+| PARTIEL | 19 |
 | À VÉRIFIER | 1 |
 | TERMINÉ | 2 |
 | BLOQUÉ / REPORTÉ / ABANDONNÉ | 0 |
@@ -47,7 +47,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  225 tests distincts réussissent après l’ajout de la reprise segmentée (M-009).
+  241 tests distincts réussissent après la segmentation dynamique (M-010).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
@@ -85,11 +85,17 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
   0 avertissement/0 erreur ; 107/107 tests réussis en 50,467 s ; formatage conforme ; contrôle
   documentaire réussi avec 16/16 documents, 36/36 exigences et 35 tâches cohérentes.
 
+- Segmentation dynamique (M-010) : `ChunkWorkQueue` découpe la ressource en chunks ; chaque connexion
+  pioche le prochain chunk atomiquement, la progression contiguë est persistée à chaque avance et la
+  redistribution est auto-équilibrée (une connexion rapide travaille plus) ; repli connexion unique
+  si longueur inconnue, nulle ou sans plages bornées.
+
 ### Limites C# actuelles
 
 - La sérialisation est limitée à l’instance d’orchestrateur/coordinateur ; l’exclusion mutuelle du
   futur `DownloadHost`, la découverte d’un hash officiel distant et les crashs matériels restent absents.
-- Aucun projet WinUI, ordonnanceur, segmentation, extension ou installateur.
+- Aucun projet WinUI, extension navigateur ou installateur ; l’ordonnancement, la segmentation
+  (statique et dynamique) et le contrôle de débit vivent dans le moteur headless.
 - Le rebinding vers loopback est bloqué ; proxy, NAT64/IPv6 adverses, TLS public, limites d’en-têtes
   et corps HTTP malformés restent incomplets.
 - Les deux sauts de redirection sont observés et le socket utilise l’adresse filtrée. Les profils
@@ -208,3 +214,18 @@ dans `verified_sha256`. Le coordinateur de finalisation applique désormais la v
 (`allowForcedBypass: false`) ; le forçage reste possible explicitement pour l'utilisateur. Six tests
 ajoutés couvrent le rond-trip SQLite des deux empreintes, le chemin par défaut via `RemoteIdentity.Sha256`
 et le décodage base64url des en-têtes.
+
+## 11. Segmentation dynamique (M-010) — 2026-08-12
+
+- `ChunkWorkQueue` découpe `[0, longueur)` en chunks de taille fixe ; `TryAcquireNext` distribue
+  atomiquement le prochain chunk (file partagée) ; `MarkCompleted` marque un chunk et
+  `ComputeContiguousProgress` retourne le plus long préfixe complet, préservant la reprise sûre.
+- `DownloadOrchestrator.RunDynamicSegmentedAsync` : N connexions tirent des chunks jusqu'à épuisement ;
+  repli connexion unique si longueur inconnue ou nulle, sans plages bornées ou `connectionCount == 1` ;
+  checkpoint persistant à chaque avancée contiguë.
+- Tests : 7 `ChunkWorkQueueTests` et 9 `DownloadOrchestratorDynamicTests` (assemblage exact de 10 chunks,
+  replis, longueur nulle, échec du premier chunk, échec de chunks ultérieurs, arguments invalides).
+- Vérification canonique : build Release 0 erreur ; 241/241 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
+- Restent : redistribution pilotée par vitesse de connexion, intégration au futur `DownloadHost` et
+  mesure de débit réelle (Q-003).

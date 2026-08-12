@@ -633,3 +633,25 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Vérification canonique : build Release 0 erreur ; 225/225 tests réussis, 0 échec, 0 ignoré ;
   formatage sans changement ; documentation 16/16.
 - Restent : mesure de débit réelle (Q-003) et intégration au futur `DownloadHost`.
+
+## 31. Redistribution dynamique — M-010 (2026-08-12)
+
+- Identifiants : M-010 / F-008 / ADR-014.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- `ChunkWorkQueue` (Application) : découpe `[0, longueur)` en chunks de taille fixe ; `TryAcquireNext`
+  distribue atomiquement le prochain chunk (file partagée, verrou interne) ; `MarkCompleted` marque un
+  chunk ; `ComputeContiguousProgress` retourne le plus long préfixe complet pour la reprise sûre.
+- `DownloadOrchestrator.RunDynamicSegmentedAsync` : N connexions tirent des chunks jusqu'à épuisement
+  (chaque chunk est une plage bornée via `IRemoteBoundedContentSource`, sinon repli plage ouverte) ;
+  repli connexion unique si longueur inconnue ou nulle, sans plages bornées ou `connectionCount == 1` ;
+  progression contiguë persistée à chaque avance.
+- Redistribution par construction (file partagée) : une connexion rapide tire davantage de chunks.
+- Tests : 7 `ChunkWorkQueueTests` (couverture sans trou/chevauchement, épuisement, queue résiduelle,
+  partage multi-workers sans doublon, progrès contigu, arguments invalides) ; 9
+  `DownloadOrchestratorDynamicTests` (assemblage exact de 10 chunks, replis connexion unique/sans plages/
+  longueur inconnue, longueur nulle, échec du premier chunk à zéro, échec de chunks ultérieurs avec
+  préfixe conservé, arguments invalides).
+- Vérification canonique : build Release 0 erreur ; 241/241 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16.
+- Restent : redistribution pilotée par vitesse de connexion, intégration HTTP réelle multi-segments et
+  intégration au futur `DownloadHost`.

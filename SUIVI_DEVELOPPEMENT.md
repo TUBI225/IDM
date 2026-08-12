@@ -3752,6 +3752,45 @@ l'intégration au futur `DownloadHost` restent.
 
 M-010 (redistribution dynamique de la segmentation), puis M-011/M-012 (reprise et retransmission).
 
+---
+
+# Entrée 2026-08-12 — Segmentation dynamique (M-010)
+
+## Objectif
+
+Redistribuer le travail entre les connexions : chaque connexion pioche le prochain chunk disponible,
+donc une connexion rapide travaille naturellement plus qu'une connexion lente (auto-équilibrage stable).
+
+## Travail réalisé
+
+- `ChunkWorkQueue` (Application) : découpe `[0, longueur)` en chunks de taille fixe ;
+  `TryAcquireNext` distribue atomiquement le prochain chunk (file partagée, verrou interne) ;
+  `MarkCompleted` marque un chunk ; `ComputeContiguousProgress` retourne le plus long préfixe complet
+  pour préserver la reprise sûre (le checkpoint ne confirme que du contigu).
+- `DownloadOrchestrator.RunDynamicSegmentedAsync` : analyse et préparation identiques aux autres runs ;
+  puis N connexions tirent des chunks jusqu'à épuisement ; repli connexion unique si longueur inconnue,
+  longueur nulle, absence de plages bornées ou `connectionCount == 1` ; progression contiguë persistée
+  à chaque avance.
+- Redistribution garantie par construction (file partagée) et prouvée par les tests : acquisition
+  multi-workers sans doublon ni trou, progrès contigu, queue résiduelle bornée, assemblage exact de
+  10 chunks par l'orchestrateur, et conservation du préfixe en cas d'échec d'un chunk.
+- Tests : 7 `ChunkWorkQueueTests` ; 9 `DownloadOrchestratorDynamicTests` (assemblage, replis,
+  longueur nulle, échec du premier chunk, échec de chunks ultérieurs, arguments invalides).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 241/241 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (M-010 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : redistribution par file de chunks testée. Restent l'intégration au futur
+`DownloadHost`, la redistribution pilotée par vitesse de connexion et la mesure de débit réelle (Q-003).
+
+## Prochaine action
+
+M-011 (sept niveaux de reprise) et M-012 (retransmission contrôlée), puis le `DownloadHost`.
+
 
 
 

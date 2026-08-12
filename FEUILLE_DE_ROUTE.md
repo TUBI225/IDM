@@ -81,7 +81,7 @@ navigateur ; Q la qualité et la livraison.
 | M-007 | Récupération fermeture/crash | Critique | PARTIEL | M-006 | Reprise et trois frontières de finalisation prouvées ; reboot reste |
 | M-008 | Identité composite distante | Critique | PARTIEL | M-003 | Identité, reprise et SHA-256 comparés ; empreinte distante acquise, recouvrement binaire reste |
 | M-009 | SegmentManager statique | Haute | PARTIEL | M-007/8 | Planneur, transfert segmenté, reprise segmentée et plages bornées testés ; intégration HTTP multi-segments reste |
-| M-010 | Segmentation dynamique | Normale | À FAIRE | M-009 | redistribution stable et mesurée |
+| M-010 | Segmentation dynamique | Normale | PARTIEL | M-009 | File de chunks partagée et redistribution testées ; redistribution pilotée par vitesse et intégration hôte restent |
 | M-011 | Sept niveaux de reprise | Critique | À FAIRE | M-007/8 | chaque branche prouvée ou arrêt sûr |
 | M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |
 | M-013 | RetryManager et Retry-After | Haute | PARTIEL | M-003 | Classifieur 429/5xx, backoff exponentiel, gigue et Retry-After testés ; intégration hôte reste |
@@ -130,7 +130,7 @@ qu’une preuve Python ne valide pas encore le moteur C#.
 | F-005 | M-003 | ADR-023 | R-003 | PR-026/027 | PARTIEL |
 | F-006 | M-003 | ADR-023 | R-003 | PR-024/025 | PARTIEL |
 | F-007 | M-009 | ADR-010 | R-013 | PR-070 à PR-072 | À FAIRE |
-| F-008 | M-010/M-014 | ADR-014 | R-015 | Q-003, 429 et benchmarks | À FAIRE |
+| F-008 | M-010/M-014 | ADR-014 | R-015 | Redistribution testée ; benchmarks Q-003 et 429 réels restent | PARTIEL |
 | F-009 | M-006/M-007 | ADR-003/009 | R-002/R-011 | PR-004/030/035 ; Python seulement | PARTIEL |
 | F-010 | M-007 | ADR-003/009 | R-002/R-011 | Crash avant second appel disque et checkpoints prouvés ; reprise réparatrice/reboot restent | PARTIEL |
 | F-011 | M-011 | ADR-020 | R-001 | Tests des sept branches | À FAIRE |

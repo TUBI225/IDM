@@ -63,7 +63,11 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - copie inter-volume vérifiée et réparable via un fichier de transit réservé ;
 - segmentation multiple statique : planneur de plages disjointes/couvrantes, transfert segmenté
   parallèle (une connexion par segment) et repli connexion unique ;
-- 225 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- segmentation dynamique : file de chunks partagée (une connexion pioche le prochain chunk, donc une
+  connexion rapide travaille plus), progression contiguë persistée et repli connexion unique ;
+- ordonnancement par priorités avec limite globale et anti-famine, et contrôle de débit
+  global/tâche/domaine ;
+- 241 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
 deux volumes physiques, le reboot Windows, la reprise segmentée, l’interface et l’installateur.
