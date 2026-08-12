@@ -3791,6 +3791,53 @@ SUCCÈS (partiel) : redistribution par file de chunks testée. Restent l'intégr
 
 M-011 (sept niveaux de reprise) et M-012 (retransmission contrôlée), puis le `DownloadHost`.
 
+---
+
+# Entrée 2026-08-12 — Sept niveaux de reprise (M-011)
+
+## Objectif
+
+Appliquer l'ordre normatif de reprise du cahier des charges (Native `Range` → sondages courts →
+URL finale autorisée → nouveau lien légitime → recouvrement → retransmission contrôlée → arrêt sûr)
+sans jamais contourner une protection : chaque branche est prouvée sûre, sinon arrêt sûr.
+
+## Travail réalisé
+
+- `ForcedResumeEngine` (Application) : moteur pur d'évaluation ordonnée. `ForcedResumeContext` reçoit
+  les observations vérifiables (métadonnées de reprise, réconciliation d'identité, capacité Range,
+  changement d'URL finale, lien expiré, nouveau lien, recouvrement nécessaire, demande d'arrêt) ;
+  `Evaluate` retourne une `ForcedResumeDecision` immuable (niveau, action, sûreté, raison stable et
+  état cible de la machine).
+- Sept niveaux ordonnés (`ForcedResumeLevel`) : 1 NativeRange (métadonnées présentes, identité
+  compatible, Range observé, sans contradiction ni preuve insuffisante ni lien expiré), 2 ShortProbe
+  (capacité Range inconnue → `bytes=0-0`), 3 AuthorizedFinalUrl (seule l'URL finale a changé, identité
+  du contenu cohérente), 4 NewLink (lien expiré + nouveau lien explicite, revalidé à l'analyse),
+  5 Recovery (préalable de sûreté : aucune reprise réseau sans position réconciliée), 6 Retransmission
+  (métadonnées absentes ou capacité Range perdue), 7 SafeStop (contradiction, preuve insuffisante ou
+  aucun chemin sûr).
+- Jamais de force : un nom seul ne fournit aucune confiance (PR-052 refusé) et aucun signal faible
+  n'annule un validateur fort contradictoire. La retransmission contrôlée appartient à M-012 : tant
+  qu'elle n'est pas implémentée, le moteur la signale (`RetransmissionPending`) mais décide l'arrêt sûr.
+- Transitions cibles légales depuis `TestingResume` : `ProbingRange`, `RenewingLink`, `Retransmitting`,
+  `RemoteFileChanged`, `PermanentFailure` — vérifiées par la matrice `DownloadStateMachine`.
+- Tests : 15 `ForcedResumeEngineTests` (chaque niveau, l'ordre de sûreté recouvrement/défaut, refus
+  du nouveau lien contradictoire, arrêt sûr sur contradiction/preuve insuffisante, priorité de l'arrêt
+  utilisateur, transitions légales, contexte null).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 256/256 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (M-011 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : moteur des sept niveaux prouvé par les tests. Restent l'intégration au futur
+`DownloadHost`, la retransmission contrôlée réelle (M-012) et les preuves de bout en bout (PR-050/051/052).
+
+## Prochaine action
+
+M-012 (retransmission contrôlée), puis le `DownloadHost`.
+
 
 
 

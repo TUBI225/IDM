@@ -655,3 +655,23 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
   formatage sans changement ; documentation 16/16.
 - Restent : redistribution pilotée par vitesse de connexion, intégration HTTP réelle multi-segments et
   intégration au futur `DownloadHost`.
+
+## 32. Sept niveaux de reprise — M-011 (2026-08-12)
+
+- Identifiants : M-011 / F-011 / F-014 / ADR-020 (ordre normatif).
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- ForcedResumeEngine (Application) : moteur pur d'évaluation ordonnée. ForcedResumeContext porte
+  uniquement des observations vérifiables ; Evaluate retourne une ForcedResumeDecision (niveau,
+  action, sûreté, raison stable, état cible).
+- Sept niveaux : 1 NativeRange (métadonnées présentes, identité compatible, Range observé, sans
+  contradiction/preuve insuffisante/lien expiré), 2 ShortProbe (capacité inconnue), 3 AuthorizedFinalUrl
+  (seule l'URL finale a changé), 4 NewLink (lien expiré + nouveau lien explicite), 5 Recovery (préalable
+  de sûreté), 6 Retransmission (métadonnées absentes ou Range perdu ; M-012 requis → arrêt sûr en
+  attendant), 7 SafeStop (contradiction, preuve insuffisante, aucun chemin sûr).
+- Tests : 15 ForcedResumeEngineTests — chaque branche, ordre de sûreté, refus du nouveau lien
+  contradictoire (PR-052), arrêt sûr, priorité de l'arrêt utilisateur, transitions légales depuis
+  TestingResume, contexte null.
+- Vérification canonique : build Release 0 erreur ; 256/256 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16.
+- Restent : intégration au futur DownloadHost, retransmission réelle (M-012) et preuves de bout en
+  bout (PR-050/051/052).

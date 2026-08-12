@@ -181,3 +181,9 @@ segmentation dynamique découpe la ressource en chunks : chaque connexion ouvre 
 chunk, donc le nombre de connexions simultanées reste borné par le pool de workers et le volume
 transféré par connexion s'équilibre naturellement. Aucun débit, gain multi-connexions, contention de
 la file ou mesure sur gros fichier n'a été mesuré ; aucune performance n'est revendiquée.
+
+La tranche reprise renforcée (M-011) porte la suite à 256 tests fonctionnels. Le moteur des sept
+niveaux est une fonction de décision pure : aucun octet, réseau ni disque supplémentaire n'est
+consommé pour choisir la branche de reprise. Aucune mesure de coût du moteur, de débit, de latence de
+reprise ou de gros fichier n'a été exécutée ; aucune performance n'est revendiquée et R-010 reste
+ouvert.

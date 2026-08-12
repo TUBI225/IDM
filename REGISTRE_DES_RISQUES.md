@@ -209,3 +209,11 @@ au volume cible, le flush, deux vérifications SHA-256 et la suppression tardive
 tests couvrent transit partiel, destination divergente, source et destination coexistantes et copie
 intégrée avec SQLite. Les risques restent ouverts faute de deux volumes physiques, disque plein,
 reparse point concurrent, retrait de support, antivirus, panne électrique et crash subprocess pendant copie.
+
+
+## Réduction de risques — moteur des sept niveaux de reprise du 2026-08-12
+
+R-001 est davantage réduit : ForcedResumeEngine (M-011) décide de la reprise dans l'ordre normatif et
+ne force jamais — une identité contradictoire, une preuve insuffisante ou un nouveau lien non validé
+refusent la reprise et tombent en arrêt sûr (PR-052). Le risque reste ouvert pour les preuves de bout en
+bout (PR-050/051/052), la retransmission réelle (M-012), les courses et la carte officielle.

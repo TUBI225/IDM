@@ -296,6 +296,14 @@ est désormais acquise automatiquement depuis les en-têtes HTTP et persistée p
 colonne dédiée, distincte du hash local. Le choix SHA-256 est donc accepté pour cette frontière ; les
 empreintes partielles versionnées restent à concevoir.
 
+## Extension ADR-020 — ordre normatif des sept niveaux de reprise (2026-08-12)
+
+ADR-020 (retransmission explicite, opt-in si coût significatif) reste proposée. M-011 applique son
+préalable : ForcedResumeEngine (Application) décide de la branche dans l'ordre normatif du cahier des
+charges — Native Range, sondages courts, URL finale autorisée, nouveau lien légitime, recouvrement,
+retransmission contrôlée, arrêt sûr — sans jamais contourner une protection. La retransmission elle-même
+(niveau 6) reste M-012 : le moteur la signale et retombe en arrêt sûr. 
+
 ## 5. Résultat de la porte G1
 
 Les ADR-025 à ADR-029 sont décidées. Seule ADR-028 est complètement appliquée ; les autres imposent

@@ -29,9 +29,9 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 
 | Statut | Nombre |
 |---|---:|
-| À FAIRE | 12 |
+| À FAIRE | 11 |
 | EN COURS | 1 |
-| PARTIEL | 19 |
+| PARTIEL | 20 |
 | À VÉRIFIER | 1 |
 | TERMINÉ | 2 |
 | BLOQUÉ / REPORTÉ / ABANDONNÉ | 0 |
@@ -47,7 +47,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  241 tests distincts réussissent après la segmentation dynamique (M-010).
+  256 tests distincts réussissent après la reprise renforcée (M-011).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
@@ -185,11 +185,10 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-L'intégration de l'empreinte distante SHA-256 est désormais complète : extraction des en-têtes HTTP,
-persistance dans une colonne dédiée (`remote_sha256`, migration v4) et validation stricte par défaut à la
-finalisation, avec forçage explicite et tracé pour l'utilisateur. La prochaine étape consiste à étendre le
-banc subprocess au protocole inter-volume sur deux volumes physiques avec interruption subprocess, disque
-plein et retrait.
+M-011 a installé le moteur des sept niveaux de reprise (chaque branche prouvée ou arrêt sûr) et la
+suite compte 256 tests. La prochaine étape consiste à implémenter M-012 (retransmission contrôlée) puis
+à assembler le `DownloadHost` ; les preuves de bout en bout (PR-050/051/052) et l'inter-volume réel
+resteront nécessaires avant l'UI.
 
 ## 9. Preuve collision et inter-volume — 2026-08-11
 
@@ -229,3 +228,24 @@ et le décodage base64url des en-têtes.
   formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
 - Restent : redistribution pilotée par vitesse de connexion, intégration au futur `DownloadHost` et
   mesure de débit réelle (Q-003).
+
+## 12. Sept niveaux de reprise (M-011) — 2026-08-12
+
+- `ForcedResumeEngine` (Application) : moteur pur d'évaluation ordonnée des sept niveaux du cahier des
+  charges — Native `Range` → sondages courts → URL finale autorisée → nouveau lien légitime →
+  recouvrement → retransmission contrôlée → arrêt sûr. `ForcedResumeContext` reçoit les observations
+  vérifiables ; `Evaluate` retourne une `ForcedResumeDecision` immuable (niveau, action, sûreté, raison
+  stable, état cible de la machine).
+- Jamais de force : la reprise native exige métadonnées présentes, identité compatible, Range observé et
+  l'absence de contradiction, de preuve insuffisante et de lien expiré ; un nom seul ne fournit aucune
+  confiance (nouveau lien contradictoire refusé, PR-052) ; le recouvrement précède toute reprise réseau.
+  La retransmission contrôlée (M-012) est signalée mais retombe en arrêt sûr tant qu'elle n'est pas
+  implémentée.
+- Transitions cibles légales depuis `TestingResume` (sonde, renouvellement, retransmission, fichier
+  distant modifié, échec permanent) vérifiées par la matrice.
+- Tests : 15 `ForcedResumeEngineTests` (chaque niveau, ordre de sûreté, refus du lien contradictoire,
+  arrêt sûr, priorité de l'arrêt utilisateur, transitions légales, contexte null).
+- Vérification canonique : build Release 0 erreur ; 256/256 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
+- Restent : intégration au futur `DownloadHost`, retransmission réelle (M-012) et preuves de bout en
+  bout (PR-050/051/052).

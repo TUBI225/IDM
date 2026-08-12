@@ -67,10 +67,13 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
   connexion rapide travaille plus), progression contiguë persistée et repli connexion unique ;
 - ordonnancement par priorités avec limite globale et anti-famine, et contrôle de débit
   global/tâche/domaine ;
-- 241 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- reprise renforcée : moteur des sept niveaux ordonnés (Native Range → sondages courts → URL finale
+  autorisée → nouveau lien légitime → recouvrement → retransmission contrôlée → arrêt sûr), chaque
+  branche prouvée ou arrêt sûr, jamais de force ;
+- 256 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
-deux volumes physiques, le reboot Windows, la reprise segmentée, l’interface et l’installateur.
+deux volumes physiques, le reboot Windows, la retransmission contrôlée, l’interface et l’installateur.
 
 ## Exécution
 

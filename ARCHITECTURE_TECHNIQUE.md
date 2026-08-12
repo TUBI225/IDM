@@ -527,3 +527,23 @@ ce qui évite le goulot d'étranglement du segment le plus lent de la segmentati
 inconnue, nulle, plages non supportées ou `connectionCount == 1` replient sur la connexion unique.
 La redistribution pilotée par vitesse mesurée et l'intégration HTTP réelle multi-segments restent à
 construire.
+
+## Extension J3 — reprise renforcée, les sept niveaux (M-011, 2026-08-12)
+
+`ForcedResumeEngine` (Application) applique l'ordre normatif du cahier des charges : Native `Range` →
+sondages courts → URL finale autorisée → nouveau lien légitime → recouvrement → retransmission contrôlée
+→ arrêt sûr. `ForcedResumeContext` transporte uniquement des observations vérifiables (métadonnées de
+reprise persistées, résultat de réconciliation, capacité Range observée, seule URL finale changée, lien
+expiré, nouveau lien fourni, recouvrement nécessaire, demande d'arrêt) ; `Evaluate` retourne une
+`ForcedResumeDecision` immuable avec niveau, action, sûreté, raison stable et état cible de la machine.
+
+Le moteur ne force jamais : la reprise native (niveau 1) exige métadonnées présentes, identité compatible
+et Range observé, sans contradiction, sans preuve insuffisante et sans lien expiré ; le nouveau lien
+(niveau 4) n'est accepté que pour validation (jamais sur la foi du nom seul, PR-052) ; le recouvrement
+(niveau 5) est un préalable de sûreté — aucune reprise réseau sans position réconciliée ; la
+retransmission contrôlée (niveau 6) appartient à M-012 et, tant qu'elle n'est pas implémentée, le moteur
+la signale (`RetransmissionPending`) mais décide l'arrêt sûr. Toute contradiction ou preuve insuffisante
+tombe en arrêt sûr avec préservation du partiel. Les transitions cibles (`ProbingRange`, `RenewingLink`,
+`Retransmitting`, `RemoteFileChanged`, `PermanentFailure`) sont toutes légales depuis `TestingResume` et
+vérifiées par `DownloadStateMachine`. L'intégration au futur `DownloadHost` et les preuves de bout en
+bout (PR-050/051/052) restent.
