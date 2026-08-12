@@ -3838,6 +3838,52 @@ SUCCÈS (partiel) : moteur des sept niveaux prouvé par les tests. Restent l'int
 
 M-012 (retransmission contrôlée), puis le `DownloadHost`.
 
+---
+
+# Entrée 2026-08-12 — Retransmission contrôlée (M-012)
+
+## Objectif
+
+Compléter la branche 6 du moteur des sept niveaux : quand le serveur refuse l'accès partiel et
+renvoie le corps depuis zéro, comparer en continu le nouveau flux aux octets locaux, ne réécrire qu'au
+premier octet absent et s'arrêter immédiatement à toute divergence. Le coût réseau total est annoncé
+et un coût significatif exige un consentement explicite (PR-062).
+
+## Travail réalisé
+
+- `ControlledRetransmissionEngine` (Application) : comparaison continue du flux distant (depuis zéro)
+  avec les octets locaux via `ITemporaryFileRangeReader`. Un préfixe identique n'est jamais réécrit
+  (travail local préservé) ; au premier octet absent, l'écriture reprend via `ITemporaryFileWriter`
+  (flush avant toute frontière retournée) ; toute divergence provoque un arrêt sûr immédiat avec
+  `DivergenceOffset`, l'ancien partiel restant intact.
+- Cas couverts : flux identique complet (aucune réécriture), extension locale (reprise au manque),
+  divergence à 64 Kio / 50 % / fin de fichier, flux plus court que l'annoncé (`RemoteEndedEarly`),
+  flux plus long que l'annoncé (`ExceededAnnouncedLength`), suffixe local obsolète (divergence à la
+  fin du flux distant), longueur inconnue, flux vide.
+- `EstimateCost(remoteLength, bytesAlreadyLocal)` annonce le volume réseau total depuis zéro et les
+  octets locaux préservés ; un coût au-dessus du seuil configurable exige un consentement (opt-in).
+- `ForcedResumeEngine` : la branche Retransmission devient sûre (`CanProceedSafely = true`, action
+  `RetransmitFromZero`, raison `ControlledRetransmission`) ; les deux tests M-011 correspondants ont
+  été mis à jour.
+- Tests : 15 `ControlledRetransmissionEngineTests` (préfixe préservé, reprise au manque avec contenu
+  exact, divergences aux trois positions critiques, flux court/long, ordre durable flush avant
+  terminaison, coût et consentement, arguments invalides).
+
+## Résultats
+
+Vérification canonique : build Release 0 erreur ; 271/271 tests réussis, 0 échec, 0 ignoré ;
+formatage sans changement ; contrôle documentaire réussi (M-012 -> PARTIEL).
+
+## État final de la tâche
+
+SUCCÈS (partiel) : retransmission contrôlée et coût annoncé testés. Restent l'intégration au futur
+`DownloadHost`, le consentement UI (F-012/PR-062) et les preuves de bout en bout sur serveur réel.
+
+## Prochaine action
+
+Assembler le `DownloadHost` (scheduler + débit + segmentation + reprise + retransmission), puis les
+preuves de bout en bout (PR-060/061/062) avant l'UI Windows.
+
 
 
 

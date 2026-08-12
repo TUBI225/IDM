@@ -666,12 +666,29 @@ réparation ADR-029 et rename final : NON EXÉCUTÉS. Résultat inconnu.
 - Sept niveaux : 1 NativeRange (métadonnées présentes, identité compatible, Range observé, sans
   contradiction/preuve insuffisante/lien expiré), 2 ShortProbe (capacité inconnue), 3 AuthorizedFinalUrl
   (seule l'URL finale a changé), 4 NewLink (lien expiré + nouveau lien explicite), 5 Recovery (préalable
-  de sûreté), 6 Retransmission (métadonnées absentes ou Range perdu ; M-012 requis → arrêt sûr en
-  attendant), 7 SafeStop (contradiction, preuve insuffisante, aucun chemin sûr).
+  de sûreté), 6 Retransmission (métadonnées absentes ou Range perdu ; contrôlée depuis M-012),
+  7 SafeStop (contradiction, preuve insuffisante, aucun chemin sûr).
 - Tests : 15 ForcedResumeEngineTests — chaque branche, ordre de sûreté, refus du nouveau lien
   contradictoire (PR-052), arrêt sûr, priorité de l'arrêt utilisateur, transitions légales depuis
   TestingResume, contexte null.
 - Vérification canonique : build Release 0 erreur ; 256/256 tests réussis, 0 échec, 0 ignoré ;
   formatage sans changement ; documentation 16/16.
-- Restent : intégration au futur DownloadHost, retransmission réelle (M-012) et preuves de bout en
-  bout (PR-050/051/052).
+- Restent : intégration au futur DownloadHost et preuves de bout en bout (PR-050/051/052).
+
+## 33. Retransmission contrôlée — M-012 (2026-08-12)
+
+- Identifiants : M-012 / F-012 / ADR-020 / PR-060/061/062.
+- Pile : CSHARP-CIBLE ; Windows, SDK .NET 10.0.302, Release.
+- `ControlledRetransmissionEngine` (Application) : comparaison continue du flux distant (depuis zéro)
+  avec les octets locaux via `ITemporaryFileRangeReader` ; préfixe identique jamais réécrit ; écriture
+  reprise au premier octet absent (flush avant frontière) ; divergence → arrêt sûr immédiat, ancien
+  partiel intact (PR-061).
+- `EstimateCost` annonce le volume réseau total depuis zéro et les octets locaux préservés ; coût
+  significatif → consentement explicite (opt-in, PR-062).
+- `ForcedResumeEngine` : branche 6 sûre (`RetransmitFromZero`, `ControlledRetransmission`).
+- Tests : 15 `ControlledRetransmissionEngineTests` (préfixe préservé, reprise au manque, divergences
+  à 64 Kio/50 %/fin, flux court/long, suffixe obsolète, ordre durable, coût/consentement, arguments).
+- Vérification canonique : build Release 0 erreur ; 271/271 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16.
+- Restent : intégration au futur `DownloadHost`, consentement UI (F-012/PR-062) et preuves de bout en
+  bout sur serveur réel (PR-060/061).

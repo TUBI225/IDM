@@ -70,10 +70,13 @@ utilise ses propres données. Le C# ne doit jamais ouvrir silencieusement sa bas
 - reprise renforcée : moteur des sept niveaux ordonnés (Native Range → sondages courts → URL finale
   autorisée → nouveau lien légitime → recouvrement → retransmission contrôlée → arrêt sûr), chaque
   branche prouvée ou arrêt sûr, jamais de force ;
-- 256 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
+- retransmission contrôlée : comparaison continue du flux depuis zéro, préfixe local préservé, reprise
+  d’écriture au premier octet absent, arrêt sûr à toute divergence et coût réseau annoncé avant
+  consentement ;
+- 271 tests .NET de domaine, application, réseau, stockage, persistance et intégration.
 
 Restent notamment à intégrer les essais sur
-deux volumes physiques, le reboot Windows, la retransmission contrôlée, l’interface et l’installateur.
+deux volumes physiques, le reboot Windows, l’interface et l’installateur.
 
 ## Exécution
 

@@ -187,3 +187,10 @@ niveaux est une fonction de décision pure : aucun octet, réseau ni disque supp
 consommé pour choisir la branche de reprise. Aucune mesure de coût du moteur, de débit, de latence de
 reprise ou de gros fichier n'a été exécutée ; aucune performance n'est revendiquée et R-010 reste
 ouvert.
+
+La tranche retransmission contrôlée (M-012) porte la suite à 271 tests fonctionnels. La comparaison
+continue lit chaque octet du flux distant (le serveur renvoie depuis zéro) et réécrit uniquement au
+premier octet absent : le coût réseau consommé est la longueur totale du fichier, indépendamment du
+travail local préservé, et il est annoncé (`EstimateCost`) avant tout consentement. Aucune mesure de
+débit, de coût CPU de la comparaison, de latence ou de gros fichier n'a été exécutée ; aucune
+performance n'est revendiquée et R-010 reste ouvert.

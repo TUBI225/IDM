@@ -217,3 +217,12 @@ R-001 est davantage réduit : ForcedResumeEngine (M-011) décide de la reprise d
 ne force jamais — une identité contradictoire, une preuve insuffisante ou un nouveau lien non validé
 refusent la reprise et tombent en arrêt sûr (PR-052). Le risque reste ouvert pour les preuves de bout en
 bout (PR-050/051/052), la retransmission réelle (M-012), les courses et la carte officielle.
+
+## Réduction de risques — retransmission contrôlée du 2026-08-12
+
+R-001 et LIM-002 sont davantage réduits : `ControlledRetransmissionEngine` (M-012) compare le flux
+renvoyé depuis zéro aux octets locaux, préserve le préfixe identique, ne réécrit qu'au premier octet
+absent et s'arrête immédiatement à toute divergence (PR-061), l'ancien partiel restant intact. Le coût
+réseau total est annoncé avant exécution et un coût significatif exige un consentement explicite
+(PR-062). Le risque reste ouvert pour l'intégration hôte, le consentement UI et les preuves sur serveur
+réel (PR-060/061/062).

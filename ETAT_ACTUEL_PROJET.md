@@ -29,9 +29,9 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 
 | Statut | Nombre |
 |---|---:|
-| À FAIRE | 11 |
+| À FAIRE | 10 |
 | EN COURS | 1 |
-| PARTIEL | 20 |
+| PARTIEL | 21 |
 | À VÉRIFIER | 1 |
 | TERMINÉ | 2 |
 | BLOQUÉ / REPORTÉ / ABANDONNÉ | 0 |
@@ -47,7 +47,7 @@ et tranches historiques `T-*` sont exclus afin d’éviter le double comptage.
 - Redirections manuelles, classification 416/429/5xx, annulation et blocage conservateur des
   adresses privées/réservées.
 - Six projets MSTest séparent Domain, Application, Network, Storage, Persistence et intégration ;
-  256 tests distincts réussissent après la reprise renforcée (M-011).
+  271 tests distincts réussissent après la retransmission contrôlée (M-012).
 - NuGet est limité à `nuget.org`, mis en cache localement et verrouillé par projet.
 - Connexion socket liée à l’IP filtrée, client HTTP injecté, proxy désactivé et rebinding loopback bloqué.
 - Writer positionnel avec flush disque et dépôt SQLite v4 : migrations v1/v2/v3/v4 checksummées, WAL,
@@ -185,10 +185,10 @@ minimales et packaging restent à décider.
 
 ## 8. Prochaine action officielle unique
 
-M-011 a installé le moteur des sept niveaux de reprise (chaque branche prouvée ou arrêt sûr) et la
-suite compte 256 tests. La prochaine étape consiste à implémenter M-012 (retransmission contrôlée) puis
-à assembler le `DownloadHost` ; les preuves de bout en bout (PR-050/051/052) et l'inter-volume réel
-resteront nécessaires avant l'UI.
+M-012 a complété la retransmission contrôlée (comparaison continue, reprise au manque, coût annoncé)
+et la suite compte 271 tests. La prochaine étape consiste à assembler le `DownloadHost` (scheduler,
+débit, segmentation, reprise et retransmission dans un seul moteur) ; les preuves de bout en bout
+(PR-060/061/062) et l'inter-volume réel resteront nécessaires avant l'UI.
 
 ## 9. Preuve collision et inter-volume — 2026-08-11
 
@@ -249,3 +249,23 @@ et le décodage base64url des en-têtes.
   formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
 - Restent : intégration au futur `DownloadHost`, retransmission réelle (M-012) et preuves de bout en
   bout (PR-050/051/052).
+
+## 13. Retransmission contrôlée (M-012) — 2026-08-12
+
+- `ControlledRetransmissionEngine` (Application) : quand le serveur renvoie depuis zéro, comparaison
+  continue du flux distant aux octets locaux via `ITemporaryFileRangeReader`. Un préfixe identique
+  n'est jamais réécrit ; au premier octet absent, l'écriture reprend via `ITemporaryFileWriter`
+  (flush avant toute frontière retournée) ; toute divergence provoque un arrêt sûr immédiat avec
+  `DivergenceOffset`, l'ancien partiel intact.
+- Cas couverts : flux identique, extension locale, divergence à 64 Kio/50 %/fin, flux plus court
+  (`RemoteEndedEarly`) ou plus long (`ExceededAnnouncedLength`) que l'annoncé, suffixe local obsolète,
+  longueur inconnue, flux vide.
+- `EstimateCost` annonce le volume réseau total depuis zéro et les octets locaux préservés ; un coût
+  significatif exige un consentement (opt-in, PR-062).
+- `ForcedResumeEngine` : la branche Retransmission devient sûre (`RetransmitFromZero`,
+  `ControlledRetransmission`) — les deux tests M-011 correspondants mis à jour.
+- Tests : 15 `ControlledRetransmissionEngineTests`.
+- Vérification canonique : build Release 0 erreur ; 271/271 tests réussis, 0 échec, 0 ignoré ;
+  formatage sans changement ; documentation 16/16, exigences 36/36 et 35 tâches cohérentes.
+- Restent : intégration au futur `DownloadHost`, consentement UI (F-012/PR-062) et preuves de bout en
+  bout sur serveur réel (PR-060/061).

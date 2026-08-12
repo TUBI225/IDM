@@ -541,9 +541,26 @@ Le moteur ne force jamais : la reprise native (niveau 1) exige métadonnées pr�
 et Range observé, sans contradiction, sans preuve insuffisante et sans lien expiré ; le nouveau lien
 (niveau 4) n'est accepté que pour validation (jamais sur la foi du nom seul, PR-052) ; le recouvrement
 (niveau 5) est un préalable de sûreté — aucune reprise réseau sans position réconciliée ; la
-retransmission contrôlée (niveau 6) appartient à M-012 et, tant qu'elle n'est pas implémentée, le moteur
-la signale (`RetransmissionPending`) mais décide l'arrêt sûr. Toute contradiction ou preuve insuffisante
-tombe en arrêt sûr avec préservation du partiel. Les transitions cibles (`ProbingRange`, `RenewingLink`,
-`Retransmitting`, `RemoteFileChanged`, `PermanentFailure`) sont toutes légales depuis `TestingResume` et
-vérifiées par `DownloadStateMachine`. L'intégration au futur `DownloadHost` et les preuves de bout en
-bout (PR-050/051/052) restent.
+retransmission contrôlée (niveau 6) est sûre depuis M-012 (extension J4) avec l'action
+`RetransmitFromZero`. Toute contradiction ou preuve insuffisante tombe en arrêt sûr avec préservation
+du partiel. Les transitions cibles (`ProbingRange`, `RenewingLink`, `Retransmitting`,
+`RemoteFileChanged`, `PermanentFailure`) sont toutes légales depuis `TestingResume` et vérifiées par
+`DownloadStateMachine`. L'intégration au futur `DownloadHost` et les preuves de bout en bout
+(PR-050/051/052) restent.
+
+## Extension J4 — retransmission contrôlée (M-012, 2026-08-12)
+
+`ControlledRetransmissionEngine` (Application) traite le serveur qui refuse l'accès partiel et renvoie
+le corps depuis zéro. Il compare en continu le flux distant aux octets locaux via
+`ITemporaryFileRangeReader` : un préfixe identique n'est jamais réécrit (travail local préservé), au
+premier octet absent l'écriture reprend via `ITemporaryFileWriter` (flush avant toute frontière
+retournée), et toute divergence provoque un arrêt sûr immédiat avec `DivergenceOffset` — l'ancien
+partiel reste intact (PR-061). Un flux plus court que l'annoncé (`RemoteEndedEarly`), plus long
+(`ExceededAnnouncedLength`) ou un suffixe local obsolète sont des divergences détectées.
+
+`EstimateCost(remoteLength, bytesAlreadyLocal)` annonce le volume réseau total consommé depuis zéro et
+les octets locaux préservés : la retransmission protège le travail local mais ne réduit pas les octets
+réseau déjà reçus (LIM-002). Un coût au-dessus du seuil configurable exige un consentement explicite
+(opt-in, PR-062). La confirmation de progression reste contiguë et uniquement après écriture durable.
+L'intégration au futur `DownloadHost`, le consentement UI (F-012) et les preuves de bout en bout sur
+serveur réel (PR-060/061/062) restent.

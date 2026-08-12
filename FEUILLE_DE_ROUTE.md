@@ -50,9 +50,8 @@ Dernière mise à jour : 2026-08-12
 
 ## Prochaine action recommandée
 
-Poursuivre M-012 (retransmission contrôlée) puis assembler le `DownloadHost`. M-011 a installé le
-moteur des sept niveaux de reprise : chaque branche est prouvée ou tombe en arrêt sûr. Les preuves
-de bout en bout (PR-050/051/052) et l'inter-volume réel restent nécessaires avant l’UI.
+Assembler le `DownloadHost` (scheduler + débit + segmentation + reprise + retransmission), puis les
+preuves de bout en bout (PR-060/061/062) et l'inter-volume réel avant l’UI Windows.
 
 ## 3. Plan détaillé jusqu’à la version stable
 
@@ -83,7 +82,7 @@ navigateur ; Q la qualité et la livraison.
 | M-009 | SegmentManager statique | Haute | PARTIEL | M-007/8 | Planneur, transfert segmenté, reprise segmentée et plages bornées testés ; intégration HTTP multi-segments reste |
 | M-010 | Segmentation dynamique | Normale | PARTIEL | M-009 | File de chunks partagée et redistribution testées ; redistribution pilotée par vitesse et intégration hôte restent |
 | M-011 | Sept niveaux de reprise | Critique | PARTIEL | M-007/8 | Moteur des sept branches testé (jamais de force) ; intégration hôte et retransmission réelle restent |
-| M-012 | Retransmission contrôlée | Haute | À FAIRE | M-011 | identité et divergence progressive testées |
+| M-012 | Retransmission contrôlée | Haute | PARTIEL | M-011 | Comparaison continue, reprise au manque et coût annoncé testés ; intégration hôte et consentement UI restent |
 | M-013 | RetryManager et Retry-After | Haute | PARTIEL | M-003 | Classifieur 429/5xx, backoff exponentiel, gigue et Retry-After testés ; intégration hôte reste |
 | M-014 | Scheduler et priorités | Normale | PARTIEL | M-009 | File prioritaire, limite globale et anti-famine par vieillissement testés ; intégration hôte reste |
 | M-015 | BandwidthController | Normale | PARTIEL | M-014 | Seaux à jetons global/tâche/domaine testés ; mesure de débit réelle reste |
@@ -134,7 +133,7 @@ qu’une preuve Python ne valide pas encore le moteur C#.
 | F-009 | M-006/M-007 | ADR-003/009 | R-002/R-011 | PR-004/030/035 ; Python seulement | PARTIEL |
 | F-010 | M-007 | ADR-003/009 | R-002/R-011 | Crash avant second appel disque et checkpoints prouvés ; reprise réparatrice/reboot restent | PARTIEL |
 | F-011 | M-011 | ADR-020 | R-001 | Branches du moteur testées ; intégration hôte reste | PARTIEL |
-| F-012 | M-012 | ADR-020 | R-001 | PR-062 | À FAIRE |
+| F-012 | M-012 | ADR-020 | R-001 | Coût annoncé testé ; consentement UI et preuves réelles restent | PARTIEL |
 | F-013 | M-008 | ADR-004/011 | R-001 | Chaîne distante/recouvrement/hash local ; empreinte distante acquise, recouvrement binaire reste | PARTIEL |
 | F-014 | M-011 | ADR-020 | R-001 | Décision nouveau lien testée ; preuves PR-050/051/052 restent | PARTIEL |
 | F-015 | M-004/M-005 | ADR-003/027 | R-002/R-011 | Avant second appel disque et commits restaurés sans base en avance ; écriture partielle reste | PARTIEL |

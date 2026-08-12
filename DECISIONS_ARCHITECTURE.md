@@ -296,13 +296,16 @@ est désormais acquise automatiquement depuis les en-têtes HTTP et persistée p
 colonne dédiée, distincte du hash local. Le choix SHA-256 est donc accepté pour cette frontière ; les
 empreintes partielles versionnées restent à concevoir.
 
-## Extension ADR-020 — ordre normatif des sept niveaux de reprise (2026-08-12)
+## Extension ADR-020 — retransmission contrôlée et ordre normatif (2026-08-12)
 
-ADR-020 (retransmission explicite, opt-in si coût significatif) reste proposée. M-011 applique son
-préalable : ForcedResumeEngine (Application) décide de la branche dans l'ordre normatif du cahier des
-charges — Native Range, sondages courts, URL finale autorisée, nouveau lien légitime, recouvrement,
-retransmission contrôlée, arrêt sûr — sans jamais contourner une protection. La retransmission elle-même
-(niveau 6) reste M-012 : le moteur la signale et retombe en arrêt sûr. 
+ADR-020 reste proposée mais est désormais implémentée à l'essentiel. M-011 applique son préalable :
+`ForcedResumeEngine` (Application) décide de la branche dans l'ordre normatif du cahier des charges —
+Native Range, sondages courts, URL finale autorisée, nouveau lien légitime, recouvrement, retransmission
+contrôlée, arrêt sûr — sans jamais contourner une protection. M-012 ajoute `ControlledRetransmissionEngine`
+(comparaison continue du flux renvoyé depuis zéro, préfixe préservé, écriture reprise au premier octet
+absent, arrêt sûr à toute divergence) et `EstimateCost` qui annonce le coût réseau total et exige un
+consentement explicite au-delà du seuil configurable (opt-in). Restent le consentement UI (F-012) et les
+preuves de bout en bout sur serveur réel (PR-060/061/062).
 
 ## 5. Résultat de la porte G1
 

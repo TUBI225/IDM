@@ -119,7 +119,7 @@ public sealed class ForcedResumeEngineTests
         Assert.IsNull(decision.TargetState);
     }
     [TestMethod]
-    public void Evaluate_MetadataAbsent_ChoosesRetransmissionPendingAndStopsSafely()
+    public void Evaluate_MetadataAbsent_ChoosesControlledRetransmission()
     {
         var context = Context(
             resumeMetadataPresent: false,
@@ -129,14 +129,14 @@ public sealed class ForcedResumeEngineTests
         var decision = Engine.Evaluate(context);
 
         Assert.AreEqual(ForcedResumeLevel.Retransmission, decision.Level);
-        Assert.AreEqual(ForcedResumeAction.PreserveAndStop, decision.Action);
-        Assert.IsFalse(decision.CanProceedSafely);
-        Assert.AreEqual(ForcedResumeReason.RetransmissionPending, decision.Reason);
+        Assert.AreEqual(ForcedResumeAction.RetransmitFromZero, decision.Action);
+        Assert.IsTrue(decision.CanProceedSafely);
+        Assert.AreEqual(ForcedResumeReason.ControlledRetransmission, decision.Reason);
         Assert.AreEqual(DownloadState.Retransmitting, decision.TargetState);
     }
 
     [TestMethod]
-    public void Evaluate_ByteRangeSupportLost_ChoosesRetransmissionPendingAndStopsSafely()
+    public void Evaluate_ByteRangeSupportLost_ChoosesControlledRetransmission()
     {
         var context = Context(
             resumeMetadataPresent: true,
@@ -147,9 +147,9 @@ public sealed class ForcedResumeEngineTests
         var decision = Engine.Evaluate(context);
 
         Assert.AreEqual(ForcedResumeLevel.Retransmission, decision.Level);
-        Assert.AreEqual(ForcedResumeAction.PreserveAndStop, decision.Action);
-        Assert.IsFalse(decision.CanProceedSafely);
-        Assert.AreEqual(ForcedResumeReason.RetransmissionPending, decision.Reason);
+        Assert.AreEqual(ForcedResumeAction.RetransmitFromZero, decision.Action);
+        Assert.IsTrue(decision.CanProceedSafely);
+        Assert.AreEqual(ForcedResumeReason.ControlledRetransmission, decision.Reason);
         Assert.AreEqual(DownloadState.Retransmitting, decision.TargetState);
     }
 

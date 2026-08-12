@@ -28,6 +28,7 @@ public enum ForcedResumeAction
     ReanalyzeFinalUrl,
     ValidateAndResumeNewLink,
     ReconcileStorage,
+    RetransmitFromZero,
     PreserveAndStop,
 }
 
@@ -41,7 +42,7 @@ public enum ForcedResumeReason
     RedirectionAuthorized,
     NewLinkToValidate,
     StorageReconciliationRequired,
-    RetransmissionPending,
+    ControlledRetransmission,
     RemoteIdentityContradicted,
     RemoteIdentityEvidenceInsufficient,
     NoSafePath,
@@ -83,8 +84,8 @@ public sealed record ForcedResumeDecision(
 /// la première branche dont les conditions sont toutes prouvées sûres est retenue, sinon
 /// la décision est l'arrêt sûr. Le recouvrement (niveau 5 de l'ordre normatif) est évalué
 /// en préalable : aucune reprise réseau n'est sûre sans position réconciliée.
-/// La retransmission contrôlée (niveau 6) appartient à M-012 : tant qu'elle n'est pas
-/// implémentée, le moteur la signale mais décide l'arrêt sûr.
+/// La retransmission contrôlée (niveau 6, M-012) est désormais sûre : le moteur la signale
+/// avec l'action `RetransmitFromZero`, le coût est annoncé et toute divergence s'arrête.
 /// </summary>
 public sealed class ForcedResumeEngine
 {
@@ -173,9 +174,9 @@ public sealed class ForcedResumeEngine
         {
             return new ForcedResumeDecision(
                 ForcedResumeLevel.Retransmission,
-                ForcedResumeAction.PreserveAndStop,
-                CanProceedSafely: false,
-                ForcedResumeReason.RetransmissionPending,
+                ForcedResumeAction.RetransmitFromZero,
+                CanProceedSafely: true,
+                ForcedResumeReason.ControlledRetransmission,
                 DownloadState.Retransmitting);
         }
 
